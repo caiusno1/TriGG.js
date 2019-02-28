@@ -1,3 +1,4 @@
+import { TriggEngine } from './trigg-engine';
 import { Component } from '@angular/core';
 
 @Component({
@@ -7,4 +8,8 @@ import { Component } from '@angular/core';
 })
 export class AppComponent {
   title = 'TGGExample1';
+  constructor(){
+    let engine = new TriggEngine;
+    engine.loadRules();
+  }
 }

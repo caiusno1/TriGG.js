@@ -2,9 +2,10 @@
   "name": "trigg-engine",
   "version": "1.0.0",
   "description": "A triple graph grammar interpreter for JavaScript/TypeScript",
-  "main": "main.js",
+  "main": "trigg-engine.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "compile": "tsc trigg-engine.ts"
   },
   "repository": {
     "type": "git",
