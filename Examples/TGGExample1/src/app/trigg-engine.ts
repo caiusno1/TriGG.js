@@ -1,22 +1,9 @@
-import { Session, noolsengine } from 'nools';
+import { Session, noolsengine } from 'customTypings/nools';
+import { isObject } from 'util';
 declare var nools: noolsengine;
-export class TriggEngine{
+export class TriggEngine {
     loadRules() {
-        const Message = function (message) {
-            this.text = message;
-        };
-        const session: Session = nools.flow('Hello World', function (f) {
-            f.rule('Hello', [Message, 'm', 'm.text =~ /^hello\\sworld$/'], function (facts) {
-                facts.m.text = facts.m.text + ' goodbye';
-                this.modify(facts.m);
-            });
-            f.rule('Goodbye', [Message, 'm', 'm.text =~ /.*goodbye$/'], function (facts) {
-                console.log(facts.m.text);
-            });
-        }).getSession();
-        session.assert(new Message('hello world'));
-        session.match();
-        session.match();
+        throw new Error('Method not implemented.');
     }
     addRule() {
         throw new Error('Method not implemented.');
@@ -24,10 +11,41 @@ export class TriggEngine{
     removeRule() {
         throw new Error('Method not implemented.');
     }
-    forward_sync(){
+    forward_sync() {
         throw new Error('Method not implemented.');
     }
-    cc(){
+    cc() {
         throw new Error('Method not implemented.');
+    }
+    match(diff) {
+      // console.log(JSON.stringify(diff));
+      console.log(JSON.stringify(this.getDiffPathesFromRoot(diff)));
+      // TODO get involved rules
+      // revoke delete based
+      // match with rule engine (not currently corr related elements? for future maybe)
+    }
+    private getDiffPathesFromRoot(diff, chain = '') {
+      if (!diff) {
+        return undefined;
+      } else {
+        let pathList = null;
+        if (isObject(diff)) {
+          pathList = [];
+          for (const key in diff) {
+            if (isObject(diff[key])) {
+              if ('__old' in diff[key] ) {
+                return [{path: chain + key, type: 'mod'}];
+              } else if (key.includes('__added') ) {
+                pathList.push({path: (chain + key).replace('__added', ''), type: 'add'});
+              } else if (key.includes('__deleted')) {
+                pathList.push({path: (chain + key).replace('__deleted', ''), type: 'rem'});
+              } else {
+                pathList = pathList.concat(this.getDiffPathesFromRoot(diff[key],  chain + key + '.'));
+              }
+            }
+          }
+        }
+        return pathList;
+      }
     }
 }
