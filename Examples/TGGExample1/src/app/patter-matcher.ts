@@ -1,19 +1,32 @@
 import { Session, noolsengine, Flow } from 'customTypings/nools';
 declare var nools: noolsengine;
+class Rule {
+  name: string;
+  constructor(name: string) {
+    this.name = name;
+  }
+}
+
 export class PatterMatcher {
   private corrModel;
   private declaredSrc;
   private declaredTrg;
   private srcflow: Flow;
   private trgflow: Flow;
-  public srcsession: Session;
+  private srcgreenflow: Flow;
+  private trggreenflow: Flow;
+  private srcsession: Session;
   private trgsession: Session;
+  // need mixed session i think
+  public srcgreensession: Session;
+  private trggreensession: Session;
   private applicableRulesSrc = [];
   private applicableRulesTrg = [];
+  private applicableFwdSyncRules = [];
   constructor(srcmodel, trgmodel, ruleseset) {
     this.addmodelElements(srcmodel, trgmodel, ruleseset);
   }
-  public match(): Promise<any> {
+  public blackmatch(): Promise<any> {
     this.applicableRulesSrc = [];
     this.applicableRulesTrg = [];
     const patternmatcher = this;
@@ -34,12 +47,23 @@ export class PatterMatcher {
       });
     });
   }
+  public matchSrcGreen(fact) {
+    this.applicableFwdSyncRules = [];
+    this.srcgreensession = this.srcgreenflow.getSession();
+    for (const key in fact.srcmatch) {
+      if (key !== '__i__') {
+        this.srcgreensession.assert( fact.srcmatch[key] );
+      }
+    }
+    this.srcgreensession.match();
+    return this.applicableFwdSyncRules;
+  }
   private addmodelElements(srcmodel, trgmodel, ruleseset) {
     // extract src patterns
     const matcher = this;
     this.srcflow = nools.flow('src', function(s) {
       for ( const rule of ruleseset) {
-        s.rule(rule.name + '_src', rule.srcpattern, function(facts) {
+        s.rule(rule.name + '_src', rule.srcblackpattern, function(facts) {
           // rewrite match
           matcher.applicableRulesSrc.push({'rule': rule, 'match': facts});
         });
@@ -47,22 +71,41 @@ export class PatterMatcher {
     });
     this.trgflow = nools.flow('trg', function(t) {
       for ( const rule of ruleseset) {
-        t.rule(rule.name + '_trg', rule.trgpattern, function(facts) {
+        t.rule(rule.name + '_trg', rule.trgblackpattern, function(facts) {
           // rewrite match
           matcher.applicableRulesTrg.push({'rule': rule, 'match': facts});
         });
       }
     });
+    this.srcgreenflow = nools.flow('src_green', function(s) {
+      for ( const rule of ruleseset) {
+        s.rule(rule.name + '_src_green', rule.srcgreenpattern, function(facts) {
+          // rewrite match
+          matcher.applicableFwdSyncRules.push({'rule': rule, 'match': facts});
+        });
+      }
+    });
+    this.trggreenflow = nools.flow('trg_green', function(s) {
+      for ( const rule of ruleseset) {
+        s.rule(rule.name + '_trg_green', rule.trggreenpattern, function(facts) {
+          // rewrite match
+          matcher.applicableRulesSrc.push({'rule': rule, 'match': facts});
+        });
+      }
+    });
     this.srcsession = this.srcflow.getSession();
     this.trgsession = this.trgflow.getSession();
-
-    for (const srcelement of this.BreadthFirstSearch(srcmodel)) {
+    this.srcgreensession = this.srcgreenflow.getSession();
+    this.trggreensession = this.trggreenflow.getSession();
+    this.srcsession.assert(srcmodel);
+    this.trgsession.assert(trgmodel);
+    /*for (const srcelement of this.BreadthFirstSearch(srcmodel)) {
       this.srcsession.assert(srcelement);
     }
 
     for (const trgelement of this.BreadthFirstSearch(trgmodel)) {
       this.trgsession.assert(trgelement);
-    }
+    }*/
   }
   public BreadthFirstSearch(model): any[] {
     const foundNodes = [];

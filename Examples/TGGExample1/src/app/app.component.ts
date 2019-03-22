@@ -27,20 +27,40 @@ export class AppComponent {
     trgmodel_ifml.pages = [];
     trgmodel_ifml.pages.push(new Page());
     trgmodel_ifml.pages[0].name = 'MyWebsite';
-    console.log(srcmodel_ctx.userContext.vision.value == 0.5);
-    console.log(trgmodel_ifml.pages[0].name == 'MyWebsite');
-    const ruleset = [{'name': 'test1',
-    'srcpattern': [Context, 'ctx', 'ctx.userContext.vision.value != 0'],
-    'trgpattern': [Page, 'p', `p.name == 'MyWebsite'`]}];
-    this.matcher = new PatterMatcher(srcmodel_ctx, trgmodel_ifml, ruleset);
+    // console.log(srcmodel_ctx.userContext.vision.value == 0.5);
+    // console.log(trgmodel_ifml.pages[0].name == 'MyWebsite');
+    const ruleset = [
+        {
+        'name': 'test1',
+        'srcblackpattern':[
+          [Context, 'ctx'],
+          [UserContext, 'uctx', '', 'from ctx.userContext']
+        ],
+        'srcgreenpattern': [
+          [UserContext, 'uctx'],
+          [Vision, 'v', 'v.value>0', 'from uctx.vision']
+        ],
+        'trgblackpattern': [
+          [Website, 'w', 'w']
+        ],
+        'trggreenpattern': [
+          [Website, 'w'],
+          [Page, 'p', `p.name == 'MyWebsite'`, 'from w.pages']
+        ],
+        corr: [
+          {'refsrc': 'v', 'reftrg': 'p'}
+        ]
+      }
+    ];
+    // this.matcher = new PatterMatcher(srcmodel_ctx, trgmodel_ifml, ruleset);
     // this.matcher.srcsession.assert(new Message('hello world'));
     // this.matcher.srcsession.match();
     // this.matcher.srcsession.assert(srcmodel_ctx.userContext.vision);
-    this.matcher.match().then(function(items) {
-      alert(JSON.stringify(items));
-    })
+    const engine: TriggEngine = new TriggEngine;
+    engine.init(srcmodel_ctx, trgmodel_ifml, ruleset);
+    engine.forward_sync();
+
   }
   public onButton() {
-    this.matcher.match();
   }
 }

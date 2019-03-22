@@ -1,9 +1,9 @@
-import { Session, noolsengine } from 'customTypings/nools';
 import { isObject } from 'util';
-declare var nools: noolsengine;
+import { PatterMatcher } from './patter-matcher';
 export class TriggEngine {
-    loadRules() {
-        throw new Error('Method not implemented.');
+    private patternMatcher: PatterMatcher;
+    init(srcmodel, trgmodel, ruleseset) {
+        this.patternMatcher = new PatterMatcher(srcmodel, trgmodel, ruleseset);
     }
     addRule() {
         throw new Error('Method not implemented.');
@@ -12,17 +12,21 @@ export class TriggEngine {
         throw new Error('Method not implemented.');
     }
     forward_sync() {
-        throw new Error('Method not implemented.');
+      const trigg = this;
+      this.patternMatcher.blackmatch().then(function(items) {
+        for (const item of items) {
+          console.log(item.name === trigg.patternMatcher.matchSrcGreen(item)[0].rule.name);
+          for ( const possibleRuleApplication of trigg.patternMatcher.matchSrcGreen(item)) {
+            if (item.name === possibleRuleApplication.rule.name) {
+              console.log('possible RuleApplication found!');
+              console.table(item.trgmatch);
+            }
+          }
+        }
+      });
     }
     cc() {
         throw new Error('Method not implemented.');
-    }
-    match(diff) {
-      // console.log(JSON.stringify(diff));
-      console.log(JSON.stringify(this.getDiffPathesFromRoot(diff)));
-      // TODO get involved rules
-      // revoke delete based
-      // match with rule engine (not currently corr related elements? for future maybe)
     }
     private getDiffPathesFromRoot(diff, chain = '') {
       if (!diff) {
