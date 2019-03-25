@@ -8,16 +8,12 @@ class Rule {
 }
 
 export class PatterMatcher {
-  private corrModel;
-  private declaredSrc;
-  private declaredTrg;
   private srcflow: Flow;
   private trgflow: Flow;
   private srcgreenflow: Flow;
   private trggreenflow: Flow;
   private srcsession: Session;
-  private trgsession: Session;
-  // need mixed session i think
+  public trgsession: Session;
   public srcgreensession: Session;
   private trggreensession: Session;
   private applicableRulesSrc = [];
@@ -26,37 +22,31 @@ export class PatterMatcher {
   constructor(srcmodel, trgmodel, ruleseset) {
     this.addmodelElements(srcmodel, trgmodel, ruleseset);
   }
-  public blackmatch(): Promise<any> {
+  public blackmatch(): any[] {
     this.applicableRulesSrc = [];
     this.applicableRulesTrg = [];
-    const patternmatcher = this;
-    return this.srcsession.match().then(function()
-    {
-      return patternmatcher.trgsession.match().then(function() {
-        const intersection = [];
-        for (const srcrule of patternmatcher.applicableRulesSrc) {
-          for (const trgrule of patternmatcher.applicableRulesTrg) {
-            if (srcrule.rule.name === trgrule.rule.name) {
-              const srcmatch = srcrule.match;
-              const trgmatch = trgrule.match;
-              intersection.push({'name': srcrule.rule.name, 'srcmatch': srcmatch, 'trgmatch': trgmatch});
-            }
-          }
+    this.srcsession.match();
+    this.trgsession.match();
+    const intersection = [];
+    for (const srcrule of this.applicableRulesSrc) {
+      for (const trgrule of this.applicableRulesTrg) {
+        if (srcrule.rule.name === trgrule.rule.name) {
+          const srcmatch = srcrule.match;
+          const trgmatch = trgrule.match;
+          intersection.push({'rule': srcrule.rule, 'srcmatch': srcmatch, 'trgmatch': trgmatch});
         }
-        return Promise.resolve(intersection);
-      });
-    });
-  }
-  public matchSrcGreen(fact) {
-    this.applicableFwdSyncRules = [];
-    this.srcgreensession = this.srcgreenflow.getSession();
-    for (const key in fact.srcmatch) {
-      if (key !== '__i__') {
-        this.srcgreensession.assert( fact.srcmatch[key] );
       }
     }
+    return intersection;
+  }
+  public matchSrcGreen(): any[] {
+    this.applicableFwdSyncRules = [];
     this.srcgreensession.match();
     return this.applicableFwdSyncRules;
+  }
+  public addtrgElements(item) {
+    this.trgsession.assert(item);
+    this.trggreensession.assert(item);
   }
   private addmodelElements(srcmodel, trgmodel, ruleseset) {
     // extract src patterns
@@ -97,15 +87,22 @@ export class PatterMatcher {
     this.trgsession = this.trgflow.getSession();
     this.srcgreensession = this.srcgreenflow.getSession();
     this.trggreensession = this.trggreenflow.getSession();
-    this.srcsession.assert(srcmodel);
-    this.trgsession.assert(trgmodel);
-    /*for (const srcelement of this.BreadthFirstSearch(srcmodel)) {
+
+    for (const srcelement of this.BreadthFirstSearch(srcmodel)) {
       this.srcsession.assert(srcelement);
     }
 
     for (const trgelement of this.BreadthFirstSearch(trgmodel)) {
       this.trgsession.assert(trgelement);
-    }*/
+    }
+
+    for (const srcelement of this.BreadthFirstSearch(srcmodel)) {
+      this.srcgreensession.assert(srcelement);
+    }
+
+    for (const trgelement of this.BreadthFirstSearch(trgmodel)) {
+      this.srcgreensession.assert(trgelement);
+    }
   }
   public BreadthFirstSearch(model): any[] {
     const foundNodes = [];

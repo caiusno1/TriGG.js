@@ -32,22 +32,30 @@ export class AppComponent {
     const ruleset = [
         {
         'name': 'test1',
-        'srcblackpattern':[
+        'srcblackpattern': [
           [Context, 'ctx'],
           [UserContext, 'uctx', '', 'from ctx.userContext']
         ],
+        'srcbrighingEdges': [{
+          'node1': 'uctx',
+          'node2': 'v',
+          'edgeName': 'vision'
+        }],
         'srcgreenpattern': [
-          [UserContext, 'uctx'],
-          [Vision, 'v', 'v.value>0', 'from uctx.vision']
+          [Vision, 'v', 'v.value>0']
         ],
         'trgblackpattern': [
           [Website, 'w', 'w']
         ],
         'trggreenpattern': [
-          [Website, 'w'],
-          [Page, 'p', `p.name == 'MyWebsite'`, 'from w.pages']
+          [Page, 'p', `p.name == 'MyWebsite'`]
         ],
-        corr: [
+        'trgbrighingEdges': [{
+          'node1': 'w',
+          'node2': 'p',
+          'edgeName': 'pages'
+        }],
+        'corr': [
           {'refsrc': 'v', 'reftrg': 'p'}
         ]
       }
@@ -56,9 +64,11 @@ export class AppComponent {
     // this.matcher.srcsession.assert(new Message('hello world'));
     // this.matcher.srcsession.match();
     // this.matcher.srcsession.assert(srcmodel_ctx.userContext.vision);
+    console.log(trgmodel_ifml);
     const engine: TriggEngine = new TriggEngine;
     engine.init(srcmodel_ctx, trgmodel_ifml, ruleset);
     engine.forward_sync();
+    // console.log(engine.trg[0]);
 
   }
   public onButton() {
