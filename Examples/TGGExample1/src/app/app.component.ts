@@ -22,11 +22,11 @@ export class AppComponent {
     srcmodel_ctx.userContext = new UserContext();
     srcmodel_ctx.userContext.vision = new Vision();
     srcmodel_ctx.userContext.vision.value = 0.5;
-
-    const trgmodel_ifml: Website = new Website();
+    let trgmodel_ifml = null;
+    /*const trgmodel_ifml: Website = new Website();
     trgmodel_ifml.pages = [];
     trgmodel_ifml.pages.push(new Page());
-    trgmodel_ifml.pages[0].name = 'MyWebsite';
+    trgmodel_ifml.pages[0].name = 'MyWebsite';*/
     // console.log(srcmodel_ctx.userContext.vision.value == 0.5);
     // console.log(trgmodel_ifml.pages[0].name == 'MyWebsite');
     const ruleset = [
@@ -58,17 +58,31 @@ export class AppComponent {
         'corr': [
           {'refsrc': 'v', 'reftrg': 'p'}
         ]
+      },
+      {
+        'name': 'test2',
+        'srcgreenpattern': [
+          [Context, 'ctx'],
+          [UserContext, 'uctx', '', 'from ctx.userContext']
+        ],
+        'trggreenpattern': [
+          [Website, 'w', `w.name == 'testWebsite'`]
+        ]
       }
     ];
     // this.matcher = new PatterMatcher(srcmodel_ctx, trgmodel_ifml, ruleset);
     // this.matcher.srcsession.assert(new Message('hello world'));
     // this.matcher.srcsession.match();
     // this.matcher.srcsession.assert(srcmodel_ctx.userContext.vision);
-    console.log(trgmodel_ifml);
+    // console.log(trgmodel_ifml);
     const engine: TriggEngine = new TriggEngine;
     engine.init(srcmodel_ctx, trgmodel_ifml, ruleset);
-    engine.forward_sync();
-    // console.log(engine.trg[0]);
+    engine.forward_sync().then(function() {
+      console.log(engine.trg);
+      engine.forward_sync().then(function() {
+        console.log(engine.trg);
+      });
+    });
 
   }
   public onButton() {

@@ -10,7 +10,11 @@ export class TriggEngine {
     init(srcmodel, trgmodel, ruleseset) {
         this.patternMatcher = new PatterMatcher(srcmodel, trgmodel, ruleseset);
         this.src = [srcmodel];
-        this.trg = [trgmodel];
+        if (trgmodel) {
+          this.trg = [trgmodel];
+        } else{
+          this.trg = [];
+        }
     }
     addRule() {
         throw new Error('Method not implemented.');
@@ -18,50 +22,55 @@ export class TriggEngine {
     removeRule() {
         throw new Error('Method not implemented.');
     }
-    forward_sync() {
+    forward_sync(): Promise<void> {
       const trigg = this;
-      const blackmatches = this.patternMatcher.blackmatch();
-      const srcgreenmatches = this.patternMatcher.matchSrcGreen();
-      for (const match of blackmatches) {
-        for (const green of srcgreenmatches) {
-          if (match.rule.name === green.rule.name) {
-            let alledgesMatching = true;
-            for (const edge of match.rule.srcbrighingEdges) {
-              alledgesMatching = alledgesMatching && match.srcmatch[edge.node1][edge.edgeName] === green.match[edge.node2];
-            }
-            if (alledgesMatching) {
-              const items = {};
-              for (const tocreateElement of match.rule.trggreenpattern) {
-                items[tocreateElement[1]] = new tocreateElement[0]();
-                const pathAndValue = tocreateElement[2].split('==');
-                let currentity = items;
-                const pathentities = pathAndValue[0].split('.');
-                const pathlength = pathentities.length;
-                pathentities.pop();
-                for (const path of pathentities) {
-                  currentity = currentity[path];
-                }
-                currentity[pathAndValue[0].split('.')[pathlength - 1]] = pathAndValue[1];
-                let connected = false;
-                for (const edge of match.rule.trgbrighingEdges) {
-                  if (tocreateElement[1] === edge.node2) {
-                    connected = true;
-                    if (Array.isArray(match.trgmatch[edge.node1][edge.edgeName])) {
-                      match.trgmatch[edge.node1][edge.edgeName].push(currentity);
-                    } else {
-                      match.trgmatch[edge.node1][edge.edgeName] = currentity ;
-                    }
+      return Promise.all([trigg.patternMatcher.blackmatch(), trigg.patternMatcher.matchSrcGreen()]).then(function(matches) {
+          for (const match of matches[0]) {
+            for (const green of matches[1]) {
+              if (match.rule.name === green.rule.name) {
+                let alledgesMatching = true;
+                if (match.rule.srcbrighingEdges) {
+                  for (const edge of match.rule.srcbrighingEdges) {
+                    alledgesMatching = alledgesMatching && match.srcmatch[edge.node1][edge.edgeName] === green.match[edge.node2];
                   }
                 }
-                this.patternMatcher.addtrgElements(currentity);
-                if (connected === false) {
-                  this.trg.push(currentity);
+                if (alledgesMatching) {
+                  const items = {};
+                  for (const tocreateElement of match.rule.trggreenpattern) {
+                    items[tocreateElement[1]] = new tocreateElement[0]();
+                    const pathAndValue = tocreateElement[2].split('==');
+                    let currentity = items;
+                    const pathentities = pathAndValue[0].split('.');
+                    const pathlength = pathentities.length;
+                    pathentities.pop();
+                    for (const path of pathentities) {
+                      currentity = currentity[path];
+                    }
+                    currentity[pathAndValue[0].split('.')[pathlength - 1]] = pathAndValue[1];
+                    let connected = false;
+                    if(match.rule.trgbrighingEdges) {
+                      for (const edge of match.rule.trgbrighingEdges) {
+                        if (tocreateElement[1] === edge.node2) {
+                          connected = true;
+                          if (Array.isArray(match.trgmatch[edge.node1][edge.edgeName])) {
+                            match.trgmatch[edge.node1][edge.edgeName].push(currentity);
+                          } else {
+                            match.trgmatch[edge.node1][edge.edgeName] = currentity ;
+                          }
+                        }
+                      }
+                    }
+                    trigg.patternMatcher.addtrgElements(currentity);
+                    if (connected === false) {
+                      trigg.trg.push(currentity);
+                    }
+                  }
                 }
               }
             }
           }
-        }
-      }
+          return Promise.resolve();
+      });
     }
     cc() {
         throw new Error('Method not implemented.');

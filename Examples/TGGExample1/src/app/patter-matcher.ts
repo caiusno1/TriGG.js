@@ -16,33 +16,47 @@ export class PatterMatcher {
   public trgsession: Session;
   public srcgreensession: Session;
   private trggreensession: Session;
+  private ruleswithoutsrcblack = [];
+  private ruleswithouttrgblack = [];
   private applicableRulesSrc = [];
   private applicableRulesTrg = [];
   private applicableFwdSyncRules = [];
   constructor(srcmodel, trgmodel, ruleseset) {
     this.addmodelElements(srcmodel, trgmodel, ruleseset);
   }
-  public blackmatch(): any[] {
-    this.applicableRulesSrc = [];
-    this.applicableRulesTrg = [];
-    this.srcsession.match();
-    this.trgsession.match();
+  public blackmatch(): Promise<any[]> {
+    // this.applicableRulesSrc = [];
+    // this.applicableRulesTrg = [];
     const intersection = [];
-    for (const srcrule of this.applicableRulesSrc) {
-      for (const trgrule of this.applicableRulesTrg) {
-        if (srcrule.rule.name === trgrule.rule.name) {
-          const srcmatch = srcrule.match;
-          const trgmatch = trgrule.match;
-          intersection.push({'rule': srcrule.rule, 'srcmatch': srcmatch, 'trgmatch': trgmatch});
+    const patternmatcher = this;
+    for (const srcrule of this.ruleswithoutsrcblack) {
+      for (const trgrule of this.ruleswithouttrgblack) {
+        if (srcrule === trgrule) {
+          intersection.push({'rule': srcrule});
         }
       }
     }
-    return intersection;
+    let waitforMatch = Promise.all([patternmatcher.srcsession.match(), patternmatcher.trgsession.match()]);
+    return waitforMatch.then(function() {
+        for (const srcrule of patternmatcher.applicableRulesSrc) {
+          for (const trgrule of patternmatcher.applicableRulesTrg) {
+            if (srcrule.rule.name === trgrule.rule.name) {
+              const srcmatch = srcrule.match;
+              const trgmatch = trgrule.match;
+              intersection.push({'rule': srcrule.rule, 'srcmatch': srcmatch, 'trgmatch': trgmatch});
+              console.log('black match');
+            }
+          }
+        }
+        return Promise.resolve(intersection);
+      }, function() {return Promise.resolve([])});
   }
-  public matchSrcGreen(): any[] {
-    this.applicableFwdSyncRules = [];
-    this.srcgreensession.match();
-    return this.applicableFwdSyncRules;
+  public matchSrcGreen(): Promise<any[]> {
+    const patternmatcher = this;
+    // this.applicableFwdSyncRules = [];
+    return patternmatcher.srcgreensession.match().then(function() {
+      return Promise.resolve(patternmatcher.applicableFwdSyncRules);
+    });
   }
   public addtrgElements(item) {
     this.trgsession.assert(item);
@@ -53,18 +67,28 @@ export class PatterMatcher {
     const matcher = this;
     this.srcflow = nools.flow('src', function(s) {
       for ( const rule of ruleseset) {
-        s.rule(rule.name + '_src', rule.srcblackpattern, function(facts) {
-          // rewrite match
-          matcher.applicableRulesSrc.push({'rule': rule, 'match': facts});
-        });
+        if (rule.srcblackpattern) {
+          s.rule(rule.name + '_src', rule.srcblackpattern, function(facts) {
+            // rewrite match
+            matcher.applicableRulesSrc.push({'rule': rule, 'match': facts});
+            console.log('srcblackmatch');
+          });
+        } else {
+          matcher.ruleswithoutsrcblack.push(rule);
+        }
       }
     });
     this.trgflow = nools.flow('trg', function(t) {
       for ( const rule of ruleseset) {
-        t.rule(rule.name + '_trg', rule.trgblackpattern, function(facts) {
-          // rewrite match
-          matcher.applicableRulesTrg.push({'rule': rule, 'match': facts});
-        });
+        if (rule.trgblackpattern) {
+          t.rule(rule.name + '_trg', rule.trgblackpattern, function(facts) {
+            // rewrite match
+            matcher.applicableRulesTrg.push({'rule': rule, 'match': facts});
+            console.log('trgblackmatch');
+          });
+        } else {
+          matcher.ruleswithouttrgblack.push(rule);
+        }
       }
     });
     this.srcgreenflow = nools.flow('src_green', function(s) {
@@ -72,6 +96,7 @@ export class PatterMatcher {
         s.rule(rule.name + '_src_green', rule.srcgreenpattern, function(facts) {
           // rewrite match
           matcher.applicableFwdSyncRules.push({'rule': rule, 'match': facts});
+          console.log('srcgreenmatch');
         });
       }
     });
@@ -80,6 +105,7 @@ export class PatterMatcher {
         s.rule(rule.name + '_trg_green', rule.trggreenpattern, function(facts) {
           // rewrite match
           matcher.applicableRulesSrc.push({'rule': rule, 'match': facts});
+          console.log('trggreenmatch');
         });
       }
     });
@@ -91,17 +117,19 @@ export class PatterMatcher {
     for (const srcelement of this.BreadthFirstSearch(srcmodel)) {
       this.srcsession.assert(srcelement);
     }
-
-    for (const trgelement of this.BreadthFirstSearch(trgmodel)) {
-      this.trgsession.assert(trgelement);
+    if (trgmodel) {
+      for (const trgelement of this.BreadthFirstSearch(trgmodel)) {
+        this.trgsession.assert(trgelement);
+      }
     }
 
     for (const srcelement of this.BreadthFirstSearch(srcmodel)) {
       this.srcgreensession.assert(srcelement);
     }
-
-    for (const trgelement of this.BreadthFirstSearch(trgmodel)) {
-      this.srcgreensession.assert(trgelement);
+    if (trgmodel) {
+      for (const trgelement of this.BreadthFirstSearch(trgmodel)) {
+        this.srcgreensession.assert(trgelement);
+      }
     }
   }
   public BreadthFirstSearch(model): any[] {
