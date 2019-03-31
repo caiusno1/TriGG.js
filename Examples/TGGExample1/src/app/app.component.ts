@@ -1,4 +1,4 @@
-import { PatterMatcher } from './patter-matcher';
+import { PatterMatcher, DeclerationRepo } from './patter-matcher';
 import { Component } from '@angular/core';
 import { Context, Vision, Message, UserContext } from './models/Context';
 import { Page, Website } from './models/Ifml';
@@ -33,8 +33,8 @@ export class AppComponent {
         {
         'name': 'test1',
         'srcblackpattern': [
-          [Context, 'ctx'],
-          [UserContext, 'uctx', '', 'from ctx.userContext']
+          [Context, 'ctx', 'dcl.declaredSrc[ctx] == 1'],
+          [UserContext, 'uctx', 'dcl.declaredSrc[uctx] == 1', 'from ctx.userContext']
         ],
         'srcbrighingEdges': [{
           'node1': 'uctx',
@@ -42,7 +42,7 @@ export class AppComponent {
           'edgeName': 'vision'
         }],
         'srcgreenpattern': [
-          [Vision, 'v', 'v.value>0']
+          [Vision, 'v', 'v.value>0 && !dcl.declaredSrc[v]']
         ],
         'trgblackpattern': [
           [Website, 'w', 'w']
@@ -62,11 +62,11 @@ export class AppComponent {
       {
         'name': 'test2',
         'srcgreenpattern': [
-          [Context, 'ctx'],
-          [UserContext, 'uctx', '', 'from ctx.userContext']
+          [Context, 'ctx', '!dcl.declaredSrc[ctx]'],
+          [UserContext, 'uctx', '!dcl.declaredSrc[uctx]', 'from ctx.userContext']
         ],
         'trggreenpattern': [
-          [Website, 'w', `w.name == 'testWebsite'`]
+          [Website, 'w', `w.name == 'testWebsite' && !dcl.declaredSrc[w]`]
         ]
       }
     ];

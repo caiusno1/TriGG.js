@@ -19,10 +19,10 @@ export as namespace noolspackage
     getSession(): Session;
   }
   export interface NoolsRuleConfig {
-    agendaGroup: string;
-    autoFocus: boolean;
-    salience: number;
-    scope: any;
+    agendaGroup: string|void;
+    autoFocus: boolean|void;
+    salience: number|void;
+    scope: any|void;
   }
   export interface Session {
     assert(fact: object): void;

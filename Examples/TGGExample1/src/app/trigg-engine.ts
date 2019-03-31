@@ -5,14 +5,12 @@ export class TriggEngine {
     public src: any[];
     public trg: any[];
     private corrModel;
-    private declaredSrc;
-    private declaredTrg;
     init(srcmodel, trgmodel, ruleseset) {
         this.patternMatcher = new PatterMatcher(srcmodel, trgmodel, ruleseset);
         this.src = [srcmodel];
         if (trgmodel) {
           this.trg = [trgmodel];
-        } else{
+        } else {
           this.trg = [];
         }
     }
@@ -36,8 +34,19 @@ export class TriggEngine {
                 }
                 if (alledgesMatching) {
                   const items = {};
+                  trigg.patternMatcher.removeFromApplicableFwdSyncRules(green.rule);
+                  for (const element in green.match) {
+                    if (element !== '__i__') {
+                      const srceelement = green.match[element];
+                      trigg.patternMatcher.dcl.declaredSrc[srceelement] = 1;
+                      // trigg.patternMatcher.refreshDeclerationSrc();
+                      trigg.patternMatcher.refreshSrcElement(srceelement);
+                    }
+                  }
                   for (const tocreateElement of match.rule.trggreenpattern) {
                     items[tocreateElement[1]] = new tocreateElement[0]();
+                    trigg.patternMatcher.dcl.declaredTrg[items[tocreateElement[1]]] = 1;
+                    // trigg.patternMatcher.refreshDeclerationTrg();
                     const pathAndValue = tocreateElement[2].split('==');
                     let currentity = items;
                     const pathentities = pathAndValue[0].split('.');
