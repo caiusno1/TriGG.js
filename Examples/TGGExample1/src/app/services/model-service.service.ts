@@ -2,7 +2,7 @@ import { element } from 'protractor';
 import { TriggEngine } from './../trigg-engine';
 import { Injectable } from '@angular/core';
 import { Subject, BehaviorSubject, Subscription } from 'rxjs';
-import { diff, patch } from 'jsondiffpatch';
+import { diff, patch} from 'jsondiffpatch';
 
 @Injectable({
   providedIn: 'root'
@@ -69,15 +69,12 @@ export class ModelServiceService {
     }
   }
   private cloneHelper(clone, a, depth) {
-    // TODO why so depth
-    if(clone && depth < 20 ) {
       Object.setPrototypeOf(clone, Object.getPrototypeOf(a) );
-          // tslint:disable-next-line:forin
       for (const prop in a) {
-        this.cloneHelper(clone[prop], a[prop], depth + 1);
-        // else alert(JSON.stringify(clone));
+        if (typeof(clone[prop]) === 'object') {
+          this.cloneHelper(clone[prop], a[prop], depth + 1);
+        }
       }
-    }
   }
   private calcDiffElements(pdiff, origin, fork) {
     if (pdiff) {
