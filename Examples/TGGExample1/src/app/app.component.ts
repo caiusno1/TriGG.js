@@ -1,3 +1,4 @@
+import { ModelServiceService } from './services/model-service.service';
 import { PatterMatcher, DeclerationRepo } from './patter-matcher';
 import { Component } from '@angular/core';
 import { Context, Vision, Message, UserContext } from './models/Context';
@@ -12,16 +13,17 @@ import { diff } from 'json-diff';
 export class AppComponent {
   title = 'TGGExample1';
   matcher: PatterMatcher;
-  constructor(){
+  srcmodel_ctx: Context;
+  constructor(private modServ: ModelServiceService) {
     /*let engine = new TriggEngine;
     engine.loadRules();
     const obj = {root: {'test': '5'}, damm: {prop1: 'testy'}};
     const obj2 = {root: {'test': '7'}, root2: {blindness: 'true'}};
     engine.match(diff(obj, obj2));*/
-    const srcmodel_ctx: Context = new Context();
-    srcmodel_ctx.userContext = new UserContext();
-    srcmodel_ctx.userContext.vision = new Vision();
-    srcmodel_ctx.userContext.vision.value = 0.5;
+    this.srcmodel_ctx = new Context();
+    this.srcmodel_ctx.userContext = new UserContext();
+    this.srcmodel_ctx.userContext.vision = new Vision();
+    this.srcmodel_ctx.userContext.vision.value = 0.5;
     let trgmodel_ifml = null;
     /*const trgmodel_ifml: Website = new Website();
     trgmodel_ifml.pages = [];
@@ -33,8 +35,8 @@ export class AppComponent {
         {
         'name': 'test1',
         'srcblackpattern': [
-          [Context, 'ctx', 'dcl.declaredSrc[ctx] == 1'],
-          [UserContext, 'uctx', 'dcl.declaredSrc[uctx] == 1', 'from ctx.userContext']
+          [Context, 'ctx', 'dcl.declaredSrc[ctx]'],
+          [UserContext, 'uctx', 'dcl.declaredSrc[uctx]', 'from ctx.userContext']
         ],
         'srcbrighingEdges': [{
           'node1': 'uctx',
@@ -76,15 +78,15 @@ export class AppComponent {
     // this.matcher.srcsession.assert(srcmodel_ctx.userContext.vision);
     // console.log(trgmodel_ifml);
     const engine: TriggEngine = new TriggEngine;
-    engine.init(srcmodel_ctx, trgmodel_ifml, ruleset);
-    engine.forward_sync().then(function() {
-      console.log(engine.trg);
-      engine.forward_sync().then(function() {
-        console.log(engine.trg);
-      });
-    });
+    modServ.pushSrcModel(this.srcmodel_ctx);
+    modServ.pushTrgModel(trgmodel_ifml);
+    engine.init(ruleset, modServ);
+    // srcmodel_ctx.userContext.vision.value = 0;
+    // modServ.pushSrcModel(srcmodel_ctx);
 
   }
   public onButton() {
+    this.srcmodel_ctx.userContext.vision.value = 0;
+    this.modServ.pushSrcModel(this.srcmodel_ctx);
   }
 }

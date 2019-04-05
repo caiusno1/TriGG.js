@@ -22,6 +22,7 @@
     "@angular/router": "^6.1.0",
     "core-js": "^2.5.4",
     "json-diff": "^0.5.4",
+    "jsondiffpatch": "^0.3.11",
     "nools": "^0.4.4",
     "rxjs": "~6.2.0",
     "zone.js": "~0.8.26"

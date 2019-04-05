@@ -1,4 +1,3 @@
-import { element } from 'protractor';
 import { NoolsRuleConfig } from './../../customTypings/nools/index.d';
 import { Session, noolsengine, Flow } from 'customTypings/nools';
 declare var nools: noolsengine;
@@ -6,11 +5,11 @@ declare var nools: noolsengine;
 export class DeclerationRepo {
   public declaredSrc = {};
   public declaredTrg = {};
-  public checkDeclaredSrc(element: any) {
-    return this.declaredSrc[element] === 1;
+  public checkDeclaredSrc(element: any): boolean {
+    return this.declaredSrc[element];
   }
-  public checkDeclaredTrg(element: any) {
-    return this.declaredTrg[element] === 1;
+  public checkDeclaredTrg(element: any): boolean {
+    return this.declaredTrg[element];
   }
 }
 
@@ -29,9 +28,9 @@ export class PatterMatcher {
   private applicableRulesTrg = [];
   private applicableFwdSyncRules = [];
   public dcl: DeclerationRepo;
-  constructor(srcmodel, trgmodel, ruleseset) {
+  constructor(ruleseset) {
     this.dcl = new DeclerationRepo;
-    this.addmodelElements(srcmodel, trgmodel, ruleseset);
+    this.addrules(ruleseset);
 
   }
   public blackmatch(): Promise<any[]> {
@@ -68,11 +67,29 @@ export class PatterMatcher {
       return Promise.resolve(patternmatcher.applicableFwdSyncRules);
     });
   }
-  public addtrgElements(item) {
+  public addtrgElement(item) {
     this.trgsession.assert(item);
     this.trggreensession.assert(item);
   }
-  private addmodelElements(srcmodel, trgmodel, ruleseset) {
+  public addTrgElementsRecursive(item) {
+    for (const singleitem of this.BreadthFirstSearch(item)) {
+      this.trgsession.assert(singleitem);
+      this.trggreensession.assert(singleitem);
+    }
+  }
+  public addSrcElementsRecursive(item) {
+    for (const singleitem of this.BreadthFirstSearch(item)) {
+      this.srcsession.assert(singleitem);
+      this.srcgreensession.assert(singleitem);
+    }
+  }
+  public removeSrcElements(items) {
+    for (const item of items) {
+      this.srcsession.retract(item);
+      this.srcgreensession.retract(item);
+    }
+  }
+  private addrules(ruleseset) {
     // extract src patterns
     const noolsConfigSrc: NoolsRuleConfig =
     {scope: {dcl: this.dcl}, agendaGroup: undefined, autoFocus: undefined, salience: undefined};
@@ -132,7 +149,7 @@ export class PatterMatcher {
     // this.srcgreensession.assert(this.dcl);
     // this.trggreensession.assert(this.dcl);
 
-    for (const srcelement of this.BreadthFirstSearch(srcmodel)) {
+    /*for (const srcelement of this.BreadthFirstSearch(srcmodel)) {
       this.srcsession.assert(srcelement);
     }
     if (trgmodel) {
@@ -148,7 +165,7 @@ export class PatterMatcher {
       for (const trgelement of this.BreadthFirstSearch(trgmodel)) {
         this.srcgreensession.assert(trgelement);
       }
-    }
+    }*/
   }
   public BreadthFirstSearch(model): any[] {
     const foundNodes = [];
@@ -173,7 +190,7 @@ export class PatterMatcher {
     this.srcsession.modify(this.dcl);
     this.srcgreensession.modify(this.dcl);
   }
-  public refreshSrcElement(element){
+  public refreshSrcElement( element ){
     this.srcsession.modify(element);
     this.srcgreensession.modify(element);
   }
