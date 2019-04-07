@@ -89,6 +89,10 @@ export class PatterMatcher {
       this.srcgreensession.retract(item);
     }
   }
+  removeTrgElement(modelTrgElement: any) {
+    this.trgsession.retract(modelTrgElement);
+    this.trggreensession.retract(modelTrgElement);
+  }
   private addrules(ruleseset) {
     // extract src patterns
     const noolsConfigSrc: NoolsRuleConfig =

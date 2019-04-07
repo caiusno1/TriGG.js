@@ -50,9 +50,6 @@ export class ModelServiceService {
       patch(this.trgModelProvider.value, delta);
       this.trgModelProvider.next(this.trgModelProvider.value);
     }
-    if (this.trgDiffProvider == null) {
-      this.trgDiffProvider = new BehaviorSubject(diffObj);
-    }
     this.trgDiffProvider.next(diffObj);
   }
   getSrcModel(): Readonly<any> {
@@ -99,10 +96,10 @@ export class ModelServiceService {
               diffItems.push({type: 'mod', element: origin});
             } else if (pdiff[propName].length === 3) {
               // del
-              diffItems.push({type: 'add', element: origin[propName]});
+              diffItems.push({type: 'del', element: origin[propName]});
             }
           } else {
-            diffItems = diffItems.concat(this.calcDiffElements(pdiff[propName], origin[propName], fork[propName]));
+            diffItems = diffItems.concat(this.calcDiffElementsHelper(pdiff[propName], origin[propName], fork[propName]));
           }
         }
       }
