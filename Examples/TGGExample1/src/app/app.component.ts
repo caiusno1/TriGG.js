@@ -1,4 +1,4 @@
-import { ModelServiceService } from './services/model-service.service';
+import { TriggModelService } from './services/trigg-model.service';
 import { PatterMatcher, DeclerationRepo } from './patter-matcher';
 import { Component } from '@angular/core';
 import { Context, Vision, Message, UserContext } from './models/Context';
@@ -14,7 +14,7 @@ export class AppComponent {
   title = 'TGGExample1';
   matcher: PatterMatcher;
   srcmodel_ctx: Context;
-  constructor(private modServ: ModelServiceService) {
+  constructor(private modServ: TriggModelService) {
     /*let engine = new TriggEngine;
     engine.loadRules();
     const obj = {root: {'test': '5'}, damm: {prop1: 'testy'}};

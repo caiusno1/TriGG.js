@@ -1,12 +1,12 @@
 import { TestBed } from '@angular/core/testing';
 
-import { ModelServiceService } from './model-service.service';
+import { TriggModelService } from './trigg-model.service';
 
 describe('ModelServiceService', () => {
   beforeEach(() => TestBed.configureTestingModule({}));
 
   it('should be created', () => {
-    const service: ModelServiceService = TestBed.get(ModelServiceService);
+    const service: TriggModelService = TestBed.get(TriggModelService);
     expect(service).toBeTruthy();
   });
 });

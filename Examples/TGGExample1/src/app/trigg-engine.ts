@@ -1,16 +1,21 @@
-import { ModelServiceService } from './services/model-service.service';
+import { TriggModelService } from './services/trigg-model.service';
 import { RuleApplication } from './models/RuleApplication';
 import { isObject } from 'util';
 import { PatterMatcher } from './patter-matcher';
+import { Injectable } from '@angular/core';
+@Injectable({
+  providedIn: 'root'
+})
 export class TriggEngine {
     private patternMatcher: PatterMatcher;
     private src: any[];
     private trg: any[];
-    public modelServ: ModelServiceService;
+    public modelServ: TriggModelService;
     private corrModel;
     private ruleApplications: RuleApplication[] = [];
     private ruleApplicationDict = {};
-    init(ruleseset, modelServ: ModelServiceService) {
+    private targetingReferencesKey: symbol;
+    init(ruleseset, modelServ: TriggModelService) {
         this.patternMatcher = new PatterMatcher(ruleseset);
         this.src = [modelServ.getSrcModel()];
         if (modelServ.getTrgModel()) {
@@ -19,11 +24,13 @@ export class TriggEngine {
           this.trg = [];
         }
         this.modelServ = modelServ;
+        // Preprocess for parent nodes
         modelServ.registerSrcDiffBasedSyncronizer(this);
         this.patternMatcher.addSrcElementsRecursive(modelServ.getSrcModel());
         if (modelServ.getTrgModel()) {
           this.patternMatcher.addTrgElementsRecursive(modelServ.getTrgModel());
         }
+        this.targetingReferencesKey = Symbol('parent');
     }
     addRule() {
         throw new Error('Method not implemented.');
@@ -53,7 +60,17 @@ export class TriggEngine {
     private rolebackRuleApplicationsRecursive(rApp: RuleApplication) {
       for (const modelTrgElement of rApp.trgElements) {
         this.patternMatcher.removeTrgElement(modelTrgElement);
-        // remove from container ?;
+        if (modelTrgElement[this.targetingReferencesKey]) {
+          for (const referencingElementBundle of modelTrgElement[this.targetingReferencesKey]) {
+            if (referencingElementBundle.type === 'single') {
+              referencingElementBundle.node[referencingElementBundle.edge] = undefined;
+            } else if (referencingElementBundle.type === 'multi') {
+              // filter out modelTrgElement
+              referencingElementBundle.node[referencingElementBundle.edge] =
+              referencingElementBundle.node[referencingElementBundle.edge].filter(modelelement => modelelement !== modelTrgElement);
+            }
+          }
+        }
       }
       for (const modelSrcElement of rApp.srcElements) {
         this.patternMatcher.dcl.declaredSrc[modelSrcElement] = undefined;
@@ -147,16 +164,20 @@ export class TriggEngine {
           for (const path of pathentities) {
             currentity = currentity[path];
           }
+          // set constraint value
           currentity[pathAndValue[0].split('.')[pathlength - 1]] = pathAndValue[1];
           let connected = false;
-          if(match.rule.trgbrighingEdges) {
+          currentity[this.targetingReferencesKey] = [];
+          if (match.rule.trgbrighingEdges) {
             for (const edge of match.rule.trgbrighingEdges) {
               if (tocreateElement[1] === edge.node2) {
                 connected = true;
                 if (Array.isArray(match.trgmatch[edge.node1][edge.edgeName])) {
                   match.trgmatch[edge.node1][edge.edgeName].push(currentity);
+                  currentity[this.targetingReferencesKey].push({node: match.trgmatch[edge.node1], edge: edge.edgeName, type: 'multi'});
                 } else {
                   match.trgmatch[edge.node1][edge.edgeName] = currentity ;
+                  currentity[this.targetingReferencesKey].push({node: match.trgmatch[edge.node1], edge: edge.edgeName, type: 'single'});
                 }
               }
             }

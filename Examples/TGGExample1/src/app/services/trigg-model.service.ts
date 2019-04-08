@@ -7,8 +7,7 @@ import { diff, patch} from 'jsondiffpatch';
 @Injectable({
   providedIn: 'root'
 })
-export class ModelServiceService {
-
+export class TriggModelService {
   constructor() { }
   private srcModelProvider: BehaviorSubject<any> = new BehaviorSubject<any>(undefined);
   private srcDiffProvider: BehaviorSubject<any> = new BehaviorSubject<any>(undefined);
@@ -79,9 +78,9 @@ export class ModelServiceService {
         return [{type: 'add', element: fork, root : true}];
       }
     }
-    return this.calcDiffElementsHelper(pdiff, origin, fork);
+    return this.calcDiffElementsHelper(pdiff, origin, fork, null, null);
   }
-  private calcDiffElementsHelper(pdiff, origin, fork) {
+  private calcDiffElementsHelper(pdiff, origin, fork, originParent, originEdge) {
     let diffItems = [];
     if (pdiff) {
       for (const propName in pdiff) {
@@ -93,13 +92,13 @@ export class ModelServiceService {
               diffItems.push({type: 'add', element: fork[propName]});
             } else if (pdiff[propName].length === 2) {
               // mod
-              diffItems.push({type: 'mod', element: origin});
+              diffItems.push({type: 'mod', element: origin, parent: originParent, edge: originEdge});
             } else if (pdiff[propName].length === 3) {
               // del
-              diffItems.push({type: 'del', element: origin[propName]});
+              diffItems.push({type: 'del', element: origin[propName], origin, propName});
             }
           } else {
-            diffItems = diffItems.concat(this.calcDiffElementsHelper(pdiff[propName], origin[propName], fork[propName]));
+            diffItems = diffItems.concat(this.calcDiffElementsHelper(pdiff[propName], origin[propName], fork[propName], origin, propName));
           }
         }
       }
