@@ -13,18 +13,27 @@ export class TriggModelService {
   private srcDiffProvider: BehaviorSubject<any> = new BehaviorSubject<any>(undefined);
   private trgModelProvider: BehaviorSubject<any> = new BehaviorSubject<any>(undefined);
   private trgDiffProvider: BehaviorSubject<any> = new BehaviorSubject<any>(undefined);
+  private afterSync: Subject<void> = new Subject();
   private subscriptions: Subscription[] = [];
   registerSrcService(any) {
     this.subscriptions.push(this.srcModelProvider.subscribe(any));
   }
   registerSrcDiffBasedSyncronizer(any: TriggEngine) {
-    this.subscriptions.push(this.srcDiffProvider.subscribe((pdiff) => {any.forward_sync(pdiff)} ));
+    const modServ = this;
+    this.subscriptions.push(this.srcDiffProvider.subscribe((pdiff) => {
+      any.forward_sync(pdiff).then(function() {
+        modServ.afterSync.next();
+      });
+    } ));
   }
   registerTrgService(any) {
     this.subscriptions.push(this.trgModelProvider.subscribe(any));
   }
   registerTrgDiffService(any) {
     this.subscriptions.push(this.trgDiffProvider.subscribe(any));
+  }
+  registerForAfterSync(any) {
+    this.subscriptions.push(this.afterSync.subscribe(any));
   }
   pushSrcModel(srcModel) {
     // model loader needed
@@ -74,6 +83,7 @@ export class TriggModelService {
   }
   private calcDiffElements(pdiff, origin, fork) {
     if (pdiff) {
+      // Adress special case that root element was created
       if ('0' in pdiff) {
         return [{type: 'add', element: fork, root : true}];
       }

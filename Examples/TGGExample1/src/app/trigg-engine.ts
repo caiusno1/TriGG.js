@@ -3,6 +3,12 @@ import { RuleApplication } from './models/RuleApplication';
 import { isObject } from 'util';
 import { PatterMatcher } from './patter-matcher';
 import { Injectable } from '@angular/core';
+
+(<any>String.prototype).replaceAll = function(search, replacement) {
+  const target = this;
+  return target.replace(new RegExp(search, 'g'), replacement);
+};
+
 @Injectable({
   providedIn: 'root'
 })
@@ -58,25 +64,27 @@ export class TriggEngine {
       return this.fwd_sync(true);
     }
     private rolebackRuleApplicationsRecursive(rApp: RuleApplication) {
-      for (const modelTrgElement of rApp.trgElements) {
-        this.patternMatcher.removeTrgElement(modelTrgElement);
-        if (modelTrgElement[this.targetingReferencesKey]) {
-          for (const referencingElementBundle of modelTrgElement[this.targetingReferencesKey]) {
-            if (referencingElementBundle.type === 'single') {
-              referencingElementBundle.node[referencingElementBundle.edge] = undefined;
-            } else if (referencingElementBundle.type === 'multi') {
-              // filter out modelTrgElement
-              referencingElementBundle.node[referencingElementBundle.edge] =
-              referencingElementBundle.node[referencingElementBundle.edge].filter(modelelement => modelelement !== modelTrgElement);
+      if (rApp) {
+        for (const modelTrgElement of rApp.trgElements) {
+          this.patternMatcher.removeTrgElement(modelTrgElement);
+          if (modelTrgElement[this.targetingReferencesKey]) {
+            for (const referencingElementBundle of modelTrgElement[this.targetingReferencesKey]) {
+              if (referencingElementBundle.type === 'single') {
+                referencingElementBundle.node[referencingElementBundle.edge] = undefined;
+              } else if (referencingElementBundle.type === 'multi') {
+                // filter out modelTrgElement
+                referencingElementBundle.node[referencingElementBundle.edge] =
+                referencingElementBundle.node[referencingElementBundle.edge].filter(modelelement => modelelement !== modelTrgElement);
+              }
             }
           }
         }
-      }
-      for (const modelSrcElement of rApp.srcElements) {
-        this.patternMatcher.dcl.declaredSrc[modelSrcElement] = undefined;
-      }
-      for (const depRuleApplication of rApp.dependentRuleApplications) {
-        this.rolebackRuleApplicationsRecursive(depRuleApplication);
+        for (const modelSrcElement of rApp.srcElements) {
+          this.patternMatcher.dcl.declaredSrc[modelSrcElement] = undefined;
+        }
+        for (const depRuleApplication of rApp.dependentRuleApplications) {
+          this.rolebackRuleApplicationsRecursive(depRuleApplication);
+        }
       }
     }
     /*private getElementByPathOfModel(path, model) {
@@ -115,10 +123,10 @@ export class TriggEngine {
           }
           changed = trigg.applyFwdSyncRule(applicableRules, trigg);
           trigg.modelServ.pushTrgModel(trigg.trg[0]);
-          if (!changed) {
+          /*if (!changed) {
             // console.log(trigg.trg);
             console.log(trigg.modelServ.getTrgModel());
-          }
+          }*/
           return trigg.fwd_sync(changed);
       });
     }
@@ -165,7 +173,7 @@ export class TriggEngine {
             currentity = currentity[path];
           }
           // set constraint value
-          currentity[pathAndValue[0].split('.')[pathlength - 1]] = pathAndValue[1];
+          currentity[(pathAndValue[0].split('.')[pathlength - 1]).trim()] = pathAndValue[1].replaceAll('\'', '');
           let connected = false;
           currentity[this.targetingReferencesKey] = [];
           if (match.rule.trgbrighingEdges) {

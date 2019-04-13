@@ -34,8 +34,8 @@ export class PatterMatcher {
 
   }
   public blackmatch(): Promise<any[]> {
-    this.applicableRulesSrc = [];
-    this.applicableRulesTrg = [];
+    // this.applicableRulesSrc = [];
+    // this.applicableRulesTrg = [];
     const intersection = [];
     const patternmatcher = this;
     for (const srcrule of this.ruleswithoutsrcblack) {

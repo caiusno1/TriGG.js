@@ -23,7 +23,7 @@ export class AppComponent {
     this.srcmodel_ctx = new Context();
     this.srcmodel_ctx.userContext = new UserContext();
     this.srcmodel_ctx.userContext.vision = new Vision();
-    this.srcmodel_ctx.userContext.vision.value = 0.5;
+    this.srcmodel_ctx.userContext.vision.value = 0;
     let trgmodel_ifml = null;
     /*const trgmodel_ifml: Website = new Website();
     trgmodel_ifml.pages = [];
@@ -81,12 +81,24 @@ export class AppComponent {
     modServ.pushSrcModel(this.srcmodel_ctx);
     modServ.pushTrgModel(trgmodel_ifml);
     engine.init(ruleset, modServ);
+    let i = 0;
+    engine.modelServ.registerForAfterSync(() => {
+      console.log('after snyc');
+      if(i === 0){
+        i++;
+      }
+      else {
+        console.log(i + '');
+        console.log(engine.modelServ.getTrgModel());
+        i++;
+      }
+    });
     // srcmodel_ctx.userContext.vision.value = 0;
     // modServ.pushSrcModel(srcmodel_ctx);
 
   }
   public onButton() {
-    this.srcmodel_ctx.userContext.vision.value = 0;
+    this.srcmodel_ctx.userContext.vision.value = 0.5;
     this.modServ.pushSrcModel(this.srcmodel_ctx);
   }
 }
