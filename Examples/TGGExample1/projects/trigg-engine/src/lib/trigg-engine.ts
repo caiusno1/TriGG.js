@@ -1,6 +1,5 @@
 import { TriggModelService } from './services/trigg-model.service';
 import { RuleApplication } from './models/RuleApplication';
-import { isObject } from 'util';
 import { PatterMatcher } from './patter-matcher';
 import { Injectable } from '@angular/core';
 
@@ -195,7 +194,7 @@ export class TriggEngine {
         if ( constraint.includes('dcl.declared') ) {
           continue;
         }
-        const pathAndValue = constraint.split(new RegExp('==|===|<|>|<=|>=|!=|!=='));
+        const pathAndValue = constraint.split(new RegExp('===|==|<=|>=|<|>|!==|!='));
         const operator = constraint.match('==|===|<|>|<=|>=|!=|!==')[0];
         LokalConstraintObjectSpace[name] = newElement;
         let currentity = LokalConstraintObjectSpace;
@@ -206,6 +205,7 @@ export class TriggEngine {
             currentity = currentity[path];
         }
         console.log(operator);
+        console.log((pathAndValue[0].split('.')[pathlength - 1]).trim());
         // set constraint value
         if (['==', '===', '<=', '>='].includes(operator)) {
           currentity[(pathAndValue[0].split('.')[pathlength - 1]).trim()] = (<any>pathAndValue[1]).replaceAll('\'', '').trim();
