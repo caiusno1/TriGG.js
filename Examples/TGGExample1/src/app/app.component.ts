@@ -1,10 +1,7 @@
-import { TriggModelService } from './services/trigg-model.service';
-import { PatterMatcher, DeclerationRepo } from './patter-matcher';
 import { Component } from '@angular/core';
 import { Context, Vision, Message, UserContext } from './models/Context';
 import { Page, Website } from './models/Ifml';
-import { TriggEngine } from './trigg-engine';
-import { diff } from 'json-diff';
+import { TriggModelService, TriggEngine } from 'projects/trigg-engine/src/public_api';
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
@@ -12,7 +9,6 @@ import { diff } from 'json-diff';
 })
 export class AppComponent {
   title = 'TGGExample1';
-  matcher: PatterMatcher;
   srcmodel_ctx: Context;
   constructor(private modServ: TriggModelService) {
     /*let engine = new TriggEngine;

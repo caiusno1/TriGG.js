@@ -1,6 +1,6 @@
 import { TestBed, async } from '@angular/core/testing';
 import { AppComponent } from './app.component';
-import { noolsengine } from 'customTypings/nools';
+import { noolsengine } from '../../projects/trigg-engine/customTypings/nools';
 declare var nools: noolsengine;
 describe('AppComponent', () => {
   beforeEach(async(() => {

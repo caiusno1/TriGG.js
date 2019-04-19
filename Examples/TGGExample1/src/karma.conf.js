@@ -28,7 +28,7 @@ module.exports = function (config) {
     browsers: ['Chrome'],
     singleRun: false,
     files: [
-      '../nools.js'
+      '../projects/trigg-engine/nools.js'
     ],
   });
 };

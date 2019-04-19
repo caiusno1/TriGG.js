@@ -25,7 +25,7 @@
             "styles": [
               "src/styles.css"
             ],
-            "scripts": [ "nools.js" ]
+            "scripts": ["./projects/trigg-engine/nools.js"]
           },
           "configurations": {
             "production": {
@@ -115,6 +115,41 @@
           "builder": "@angular-devkit/build-angular:tslint",
           "options": {
             "tsConfig": "e2e/tsconfig.e2e.json",
+            "exclude": [
+              "**/node_modules/**"
+            ]
+          }
+        }
+      }
+    },
+    "TriggEngine": {
+      "root": "projects/trigg-engine",
+      "sourceRoot": "projects/trigg-engine/src",
+      "projectType": "library",
+      "prefix": "lib",
+      "architect": {
+        "build": {
+          "builder": "@angular-devkit/build-ng-packagr:build",
+          "options": {
+            "tsConfig": "projects/trigg-engine/tsconfig.lib.json",
+            "project": "projects/trigg-engine/ng-package.json"
+          }
+        },
+        "test": {
+          "builder": "@angular-devkit/build-angular:karma",
+          "options": {
+            "main": "projects/trigg-engine/src/test.ts",
+            "tsConfig": "projects/trigg-engine/tsconfig.spec.json",
+            "karmaConfig": "projects/trigg-engine/karma.conf.js"
+          }
+        },
+        "lint": {
+          "builder": "@angular-devkit/build-angular:tslint",
+          "options": {
+            "tsConfig": [
+              "projects/trigg-engine/tsconfig.lib.json",
+              "projects/trigg-engine/tsconfig.spec.json"
+            ],
             "exclude": [
               "**/node_modules/**"
             ]
