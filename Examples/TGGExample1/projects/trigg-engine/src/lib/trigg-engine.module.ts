@@ -1,10 +1,14 @@
+import { TriggEngine } from './trigg-engine';
+import { TriggModelService } from './services/trigg-model.service';
 import { NgModule } from '@angular/core';
-import { TriggEngineComponent } from './trigg-engine.component';
+import { CommonModule } from '@angular/common';
 
 @NgModule({
   imports: [
+    CommonModule
   ],
-  declarations: [TriggEngineComponent],
-  exports: [TriggEngineComponent]
+  declarations: [],
+  exports: [],
+  providers: [TriggEngine, TriggModelService]
 })
 export class TriggEngineModule { }
