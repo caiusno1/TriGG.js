@@ -87,16 +87,6 @@ export class TriggEngine {
         }
       }
     }
-    /*private getElementByPathOfModel(path, model) {
-      const pathelements = path.split('.');
-      let pathelement = model[pathelements[0]];
-      let pathindex = 1;
-      while (pathelement !== undefined && pathindex < pathelements.length) {
-        pathelement = pathelement = pathelement[pathelements[pathindex]];
-        pathindex++;
-      }
-      return pathelement;
-    }*/
     private fwd_sync(changed): Promise<void> {
       const trigg = this;
       if (changed === false) {
@@ -123,10 +113,6 @@ export class TriggEngine {
           }
           changed = trigg.applyFwdSyncRule(applicableRules, trigg);
           trigg.modelServ.pushTrgModel(trigg.trg[0]);
-          /*if (!changed) {
-            // console.log(trigg.trg);
-            console.log(trigg.modelServ.getTrgModel());
-          }*/
           return trigg.fwd_sync(changed);
       });
     }
@@ -160,40 +146,37 @@ export class TriggEngine {
           }
         }
         for (const tocreateElement of match.rule.trggreenpattern) {
-          items[tocreateElement[1]] = new tocreateElement[0]();
+          const newElement = this.createObjectThatFitConstraints(tocreateElement[0], tocreateElement[2], items, tocreateElement[1] );
           rApp.trgElements.push(items[tocreateElement[1]]);
-          trigg.patternMatcher.dcl.declaredTrg[items[tocreateElement[1]]] = rApp;
-          // trigg.patternMatcher.refreshDeclerationTrg();
-          const pathAndValue = tocreateElement[2].split('==');
-          let currentity = items;
-          const pathentities = pathAndValue[0].split('.');
-          const pathlength = pathentities.length;
-          pathentities.pop();
-          for (const path of pathentities) {
-            currentity = currentity[path];
-          }
-          // set constraint value
-          currentity[(pathAndValue[0].split('.')[pathlength - 1]).trim()] = pathAndValue[1].replaceAll('\'', '');
+
           let connected = false;
-          currentity[this.targetingReferencesKey] = [];
+          newElement[this.targetingReferencesKey] = [];
           if (match.rule.trgbrighingEdges) {
             for (const edge of match.rule.trgbrighingEdges) {
               if (tocreateElement[1] === edge.node2) {
                 connected = true;
                 if (Array.isArray(match.trgmatch[edge.node1][edge.edgeName])) {
-                  match.trgmatch[edge.node1][edge.edgeName].push(currentity);
-                  currentity[this.targetingReferencesKey].push({node: match.trgmatch[edge.node1], edge: edge.edgeName, type: 'multi'});
+                  match.trgmatch[edge.node1][edge.edgeName].push(items[tocreateElement[1]]);
+                  newElement[this.targetingReferencesKey].push({node: match.trgmatch[edge.node1], edge: edge.edgeName, type: 'multi'});
                 } else {
-                  match.trgmatch[edge.node1][edge.edgeName] = currentity ;
-                  currentity[this.targetingReferencesKey].push({node: match.trgmatch[edge.node1], edge: edge.edgeName, type: 'single'});
+                  match.trgmatch[edge.node1][edge.edgeName] = items[tocreateElement[1]] ;
+                  newElement[this.targetingReferencesKey].push({node: match.trgmatch[edge.node1], edge: edge.edgeName, type: 'single'});
                 }
               }
             }
-          }
-          trigg.patternMatcher.addtrgElement(currentity);
-          if (connected === false) {
-            trigg.trg.push(currentity);
-          }
+            if (tocreateElement.length > 3) {
+              const parentRefByNools = (<string>tocreateElement[3]).replace('from', '').trim().split('.')[0];
+              const parentEdgeRefByNools = (<string>tocreateElement[3]).replace('from', '').trim().split('.')[1];
+              if (parentRefByNools in items) {
+                items[parentRefByNools][parentEdgeRefByNools] = newElement;
+                connected = true;
+              }
+            }
+      }
+      trigg.patternMatcher.addtrgElement(items[tocreateElement[1]]);
+      if (connected === false) {
+        trigg.trg.push(items[tocreateElement[1]]);
+      }
         }
         const dependingSet = new Set<RuleApplication>(dependingList);
         for (const dependentElement of dependingSet) {
@@ -205,6 +188,34 @@ export class TriggEngine {
       } else {
         return false;
       }
+    }
+    private createObjectThatFitConstraints(type: any, constraints: string, LokalConstraintObjectSpace: any, name: string) {
+      const newElement = new type();
+      for (const constraint of constraints.split('&&').map((str: string) => str.trim())) {
+        if ( constraint.includes('dcl.declared') ) {
+          continue;
+        }
+        const pathAndValue = constraint.split(new RegExp('==|===|<|>|<=|>=|!=|!=='));
+        const operator = constraint.match('==|===|<|>|<=|>=|!=|!==')[0];
+        LokalConstraintObjectSpace[name] = newElement;
+        let currentity = LokalConstraintObjectSpace;
+        const pathentities = pathAndValue[0].split('.');
+        const pathlength = pathentities.length;
+        pathentities.pop();
+        for (const path of pathentities) {
+            currentity = currentity[path];
+        }
+        console.log(operator);
+        // set constraint value
+        if (['==', '===', '<=', '>='].includes(operator)) {
+          currentity[(pathAndValue[0].split('.')[pathlength - 1]).trim()] = (<any>pathAndValue[1]).replaceAll('\'', '').trim();
+        } else if (['>', '!=', '!=='].includes(operator)) {
+          currentity[(pathAndValue[0].split('.')[pathlength - 1]).trim()] = (<any>pathAndValue[1]).replaceAll('\'', '').trim() + 1 ;
+        } else {
+          currentity[(pathAndValue[0].split('.')[pathlength - 1]).trim()] = (<any>pathAndValue[1]).replaceAll('\'', '').trim() - 1;
+        }
+      }
+      return newElement;
     }
     cc() {
         throw new Error('Method not implemented.');
