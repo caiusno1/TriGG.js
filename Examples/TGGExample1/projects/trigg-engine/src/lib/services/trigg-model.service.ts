@@ -69,17 +69,17 @@ export class TriggModelService {
   private clone(a) {
     if (a) {
       let theclone = JSON.parse(JSON.stringify(a));
-      this.cloneHelper(theclone, a, 0);
+      this.cloneHelper(theclone, a);
       return theclone;
     }
   }
-  private cloneHelper(clone, a, depth) {
-      Object.setPrototypeOf(clone, Object.getPrototypeOf(a) );
-      for (const prop in a) {
-        if (typeof(clone[prop]) === 'object') {
-          this.cloneHelper(clone[prop], a[prop], depth + 1);
-        }
+  private cloneHelper(clone, a) {
+    Object.setPrototypeOf(clone, Object.getPrototypeOf(a) );
+    for (const prop in a) {
+      if (typeof(clone[prop]) === 'object') {
+        this.cloneHelper(clone[prop], a[prop]);
       }
+    }
   }
   private calcDiffElements(pdiff, origin, fork) {
     if (pdiff) {

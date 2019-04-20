@@ -65,15 +65,17 @@ export class TriggEngine {
     private rolebackRuleApplicationsRecursive(rApp: RuleApplication) {
       if (rApp) {
         for (const modelTrgElement of rApp.trgElements) {
-          this.patternMatcher.removeTrgElement(modelTrgElement);
-          if (modelTrgElement[this.targetingReferencesKey]) {
-            for (const referencingElementBundle of modelTrgElement[this.targetingReferencesKey]) {
-              if (referencingElementBundle.type === 'single') {
-                referencingElementBundle.node[referencingElementBundle.edge] = undefined;
-              } else if (referencingElementBundle.type === 'multi') {
-                // filter out modelTrgElement
-                referencingElementBundle.node[referencingElementBundle.edge] =
-                referencingElementBundle.node[referencingElementBundle.edge].filter(modelelement => modelelement !== modelTrgElement);
+          if(modelTrgElement){
+            this.patternMatcher.removeTrgElement(modelTrgElement);
+            if (modelTrgElement[this.targetingReferencesKey]) {
+              for (const referencingElementBundle of modelTrgElement[this.targetingReferencesKey]) {
+                if (referencingElementBundle.type === 'single') {
+                  referencingElementBundle.node[referencingElementBundle.edge] = undefined;
+                } else if (referencingElementBundle.type === 'multi') {
+                  // filter out modelTrgElement
+                  referencingElementBundle.node[referencingElementBundle.edge] =
+                  referencingElementBundle.node[referencingElementBundle.edge].filter(modelelement => modelelement !== modelTrgElement);
+                }
               }
             }
           }
@@ -163,18 +165,22 @@ export class TriggEngine {
                 }
               }
             }
-            if (tocreateElement.length > 3) {
-              const parentRefByNools = (<string>tocreateElement[3]).replace('from', '').trim().split('.')[0];
-              const parentEdgeRefByNools = (<string>tocreateElement[3]).replace('from', '').trim().split('.')[1];
+            if (tocreateElement.length > 4 && tocreateElement[4]) {
+              const parentRefByNools = (<string>tocreateElement[4].from).trim().split('.')[0];
+              const parentEdgeRefByNools = (<string>tocreateElement[4].from).trim().split('.')[1];
               if (parentRefByNools in items) {
-                items[parentRefByNools][parentEdgeRefByNools] = newElement;
+                if(Array.isArray(items[parentRefByNools][parentEdgeRefByNools])){
+                  items[parentRefByNools][parentEdgeRefByNools].push(newElement);
+                } else {
+                  items[parentRefByNools][parentEdgeRefByNools] = newElement;
+                }
                 connected = true;
               }
             }
       }
-      trigg.patternMatcher.addtrgElement(items[tocreateElement[1]]);
+      trigg.patternMatcher.addtrgElement(newElement);
       if (connected === false) {
-        trigg.trg.push(items[tocreateElement[1]]);
+        trigg.trg.push(newElement);
       }
         }
         const dependingSet = new Set<RuleApplication>(dependingList);
@@ -191,28 +197,30 @@ export class TriggEngine {
     private createObjectThatFitConstraints(type: any, constraints: string, LokalConstraintObjectSpace: any, name: string) {
       const newElement = new type();
       for (const constraint of constraints.split('&&').map((str: string) => str.trim())) {
-        if ( constraint.includes('dcl.declared') ) {
+        if ( constraint.includes('dcl.declared') || constraint === '' ) {
           continue;
         }
         const pathAndValue = constraint.split(new RegExp('===|==|<=|>=|<|>|!==|!='));
-        const operator = constraint.match('==|===|<|>|<=|>=|!=|!==')[0];
-        LokalConstraintObjectSpace[name] = newElement;
-        let currentity = LokalConstraintObjectSpace;
-        const pathentities = pathAndValue[0].split('.');
-        const pathlength = pathentities.length;
-        pathentities.pop();
-        for (const path of pathentities) {
-            currentity = currentity[path];
-        }
-        console.log(operator);
-        console.log((pathAndValue[0].split('.')[pathlength - 1]).trim());
-        // set constraint value
-        if (['==', '===', '<=', '>='].includes(operator)) {
-          currentity[(pathAndValue[0].split('.')[pathlength - 1]).trim()] = (<any>pathAndValue[1]).replaceAll('\'', '').trim();
-        } else if (['>', '!=', '!=='].includes(operator)) {
-          currentity[(pathAndValue[0].split('.')[pathlength - 1]).trim()] = (<any>pathAndValue[1]).replaceAll('\'', '').trim() + 1 ;
-        } else {
-          currentity[(pathAndValue[0].split('.')[pathlength - 1]).trim()] = (<any>pathAndValue[1]).replaceAll('\'', '').trim() - 1;
+        if(constraint.match('==|===|<|>|<=|>=|!=|!==') && constraint.match('==|===|<|>|<=|>=|!=|!==')[0]){
+          const operator = constraint.match('==|===|<|>|<=|>=|!=|!==')[0];
+          LokalConstraintObjectSpace[name] = newElement;
+          let currentity = LokalConstraintObjectSpace;
+          const pathentities = pathAndValue[0].split('.');
+          const pathlength = pathentities.length;
+          pathentities.pop();
+          for (const path of pathentities) {
+              currentity = currentity[path];
+          }
+          console.log(operator);
+          console.log((pathAndValue[0].split('.')[pathlength - 1]).trim());
+          // set constraint value
+          if (['==', '===', '<=', '>='].includes(operator)) {
+            currentity[(pathAndValue[0].split('.')[pathlength - 1]).trim()] = (<any>pathAndValue[1]).replaceAll('\'', '').trim();
+          } else if (['>', '!=', '!=='].includes(operator)) {
+            currentity[(pathAndValue[0].split('.')[pathlength - 1]).trim()] = (<any>pathAndValue[1]).replaceAll('\'', '').trim() + 1 ;
+          } else {
+            currentity[(pathAndValue[0].split('.')[pathlength - 1]).trim()] = (<any>pathAndValue[1]).replaceAll('\'', '').trim() - 1;
+          }
         }
       }
       return newElement;
