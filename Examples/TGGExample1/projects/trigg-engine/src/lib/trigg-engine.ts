@@ -114,6 +114,7 @@ export class TriggEngine {
           }
           changed = trigg.applyFwdSyncRule(applicableRules, trigg);
           trigg.modelServ.pushTrgModel(trigg.trg[0]);
+          trigg.patternMatcher.clearNonApplicatbleRulesFromApplicable();
           return trigg.fwd_sync(changed);
       });
     }
