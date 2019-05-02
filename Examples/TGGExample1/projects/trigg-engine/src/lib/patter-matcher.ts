@@ -171,28 +171,20 @@ export class PatterMatcher {
       }
     }*/
   }
-  public clearNonApplicatbleRulesFromApplicable(){
-    this.applicableRulesSrc.filter((posRuleApp)=> {
+  public clearNonApplicableRulesFromApplicable(){
+    this.applicableRulesSrc = this.applicableRulesSrc.filter((posRuleApp)=> {
       let valid = true;
       for(const prop in (<Object>posRuleApp.match)){
-        valid = valid && !this.dcl.declaredSrc[(<Object>posRuleApp.match)[prop]]
+        if(prop !== '__i__')
+          valid = valid && !this.dcl.declaredSrc[(<Object>posRuleApp.match)[prop]]
       }
       return valid;
     });
-    this.applicableRulesTrg.filter((posRuleApp)=> {
+    this.applicableFwdSyncRules = this.applicableFwdSyncRules.filter((posRuleApp)=> {
       let valid = true;
       for(const prop in (<Object>posRuleApp.match)){
-        valid = valid && !this.dcl.declaredTrg[(<Object>posRuleApp.match)[prop]]
-      }
-      return valid;
-    });
-    this.applicableFwdSyncRules.filter((posRuleApp)=> {
-      let valid = true;
-      for(const prop in (<Object>posRuleApp.srcmatch)){
-        valid = valid && !this.dcl.declaredSrc[(<Object>posRuleApp.match)[prop]]
-      }
-      for(const prop in (<Object>posRuleApp.trgmatch)){
-        valid = valid && !this.dcl.declaredTrg[(<Object>posRuleApp.match)[prop]]
+        if(prop !== '__i__')
+          valid = valid && !this.dcl.declaredSrc[(<Object>posRuleApp.match)[prop]]
       }
       return valid;
     });

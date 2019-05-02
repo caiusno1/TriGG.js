@@ -1,7 +1,11 @@
+import { patch } from 'jsondiffpatch';
+import { ApplicableRuleApp } from './TGGModels/ApplicableRuleApp';
+import { TGGRule } from './TGGModels/TGGRule';
 import { TriggModelService } from './services/trigg-model.service';
 import { RuleApplication } from './models/RuleApplication';
 import { PatterMatcher } from './patter-matcher';
 import { Injectable } from '@angular/core';
+import { TemperatureEnum } from './TGGModels/TemperatureEnum';
 
 (<any>String.prototype).replaceAll = function(search, replacement) {
   const target = this;
@@ -44,7 +48,7 @@ export class TriggEngine {
         throw new Error('Method not implemented.');
     }
     forward_sync(srcdiff): Promise<void> {
-      console.log(srcdiff);
+      // console.log(srcdiff);
       if (srcdiff) {
         for (const pdiff of srcdiff) {
           if (pdiff.type === 'del' || pdiff.type === 'mod') {
@@ -55,7 +59,7 @@ export class TriggEngine {
             this.patternMatcher.addSrcElementsRecursive(pdiff.element);
           }
           if (pdiff.type === 'mod') {
-            console.log(this.ruleApplicationDict[pdiff.element]);
+            // console.log(this.ruleApplicationDict[pdiff.element]);
             this.patternMatcher.refreshSrcElement(pdiff.element);
           }
         }
@@ -112,15 +116,15 @@ export class TriggEngine {
               }
             }
           }
-          changed = trigg.applyFwdSyncRule(applicableRules, trigg);
+          changed = trigg.chooseApplicableRule(applicableRules, trigg);
           trigg.modelServ.pushTrgModel(trigg.trg[0]);
-          trigg.patternMatcher.clearNonApplicatbleRulesFromApplicable();
+          trigg.patternMatcher.clearNonApplicableRulesFromApplicable();
           return trigg.fwd_sync(changed);
       });
     }
-    private applyFwdSyncRule(rules, trigg) {
-      if (rules && rules[0]) {
-        const rule = rules[0];
+    private applyFwdSyncRule(rule: ApplicableRuleApp, trigg) {
+      console.log(rule.green.rule.name + ' applied')
+      if (rule) {
         const match = rule.match;
         const green = rule.green;
         const items = {};
@@ -133,7 +137,7 @@ export class TriggEngine {
         }
         for (const trgBlackMatchElement in match.trgmatch) {
           if (trgBlackMatchElement !== '__i__') {
-            dependingList.push(trigg.patternMatcher.dcl.declaredSrc[match.srcmatch[trgBlackMatchElement]]);
+            dependingList.push(trigg.patternMatcher.dcl.declaredTrg[match.srcmatch[trgBlackMatchElement]]);
           }
         }
         rApp.ruleName = match.rule.name;
@@ -179,6 +183,7 @@ export class TriggEngine {
               }
             }
       }
+      this.patternMatcher.dcl.declaredTrg[newElement]=rApp;
       trigg.patternMatcher.addtrgElement(newElement);
       if (connected === false) {
         trigg.trg.push(newElement);
@@ -192,6 +197,21 @@ export class TriggEngine {
         }
         return true;
       } else {
+        return false;
+      }
+    }
+    private chooseApplicableRule(rules: ApplicableRuleApp[], trigg){
+      // TODO same element check in multiple applicable rules (problem of multiplicity of an generated Element by 2 rules)
+      // Solution idea adaptation elements ? 1-1 beziehung to be specific 1-n for possible adaptations
+      // TODO multiple apply one rule to all matching elements
+      if(rules && rules.length>0){
+        const hotRules = rules.filter((rule)=> rule.green.rule.temperature === TemperatureEnum.COLD);
+        if(hotRules.length>0){
+          rules = hotRules;
+        }
+        return this.applyFwdSyncRule(rules[0],trigg);
+      }
+      else{
         return false;
       }
     }
@@ -212,8 +232,8 @@ export class TriggEngine {
           for (const path of pathentities) {
               currentity = currentity[path];
           }
-          console.log(operator);
-          console.log((pathAndValue[0].split('.')[pathlength - 1]).trim());
+          //console.log(operator);
+          // console.log((pathAndValue[0].split('.')[pathlength - 1]).trim());
           // set constraint value
           if (['==', '===', '<=', '>='].includes(operator)) {
             currentity[(pathAndValue[0].split('.')[pathlength - 1]).trim()] = (<any>pathAndValue[1]).replaceAll('\'', '').trim();
