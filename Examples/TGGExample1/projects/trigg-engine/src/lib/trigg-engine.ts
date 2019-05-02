@@ -1,6 +1,6 @@
 import { patch } from 'jsondiffpatch';
 import { ApplicableRuleApp } from './TGGModels/ApplicableRuleApp';
-import { TGGRule } from './TGGModels/TGGRule';
+import { TGGRule, FromLink } from './TGGModels/TGGRule';
 import { TriggModelService } from './services/trigg-model.service';
 import { RuleApplication } from './models/RuleApplication';
 import { PatterMatcher } from './patter-matcher';
@@ -162,6 +162,10 @@ export class TriggEngine {
               if (tocreateElement[1] === edge.node2) {
                 connected = true;
                 if (Array.isArray(match.trgmatch[edge.node1][edge.edgeName])) {
+                  if(match.trgmatch[edge.node1][edge.edgeName].filter(ele => ele.name || ele.name === items[tocreateElement[1]].name ).length>0 && rule.green.rule.temperature === TemperatureEnum.COLD){
+                    // This is just a quick and dirty fix (assuming name is unique in a list)
+                    return;
+                  }
                   match.trgmatch[edge.node1][edge.edgeName].push(items[tocreateElement[1]]);
                   newElement[this.targetingReferencesKey].push({node: match.trgmatch[edge.node1], edge: edge.edgeName, type: 'multi'});
                 } else {
@@ -171,8 +175,8 @@ export class TriggEngine {
               }
             }
             if (tocreateElement.length > 4 && tocreateElement[4]) {
-              const parentRefByNools = (<string>tocreateElement[4].from).trim().split('.')[0];
-              const parentEdgeRefByNools = (<string>tocreateElement[4].from).trim().split('.')[1];
+              const parentRefByNools = (<FromLink>tocreateElement[4]).from.trim().split('.')[0];
+              const parentEdgeRefByNools = (<FromLink>tocreateElement[4]).from.trim().split('.')[1];
               if (parentRefByNools in items) {
                 if(Array.isArray(items[parentRefByNools][parentEdgeRefByNools])){
                   items[parentRefByNools][parentEdgeRefByNools].push(newElement);
@@ -205,7 +209,7 @@ export class TriggEngine {
       // Solution idea adaptation elements ? 1-1 beziehung to be specific 1-n for possible adaptations
       // TODO multiple apply one rule to all matching elements
       if(rules && rules.length>0){
-        const hotRules = rules.filter((rule)=> rule.green.rule.temperature === TemperatureEnum.COLD);
+        const hotRules = rules.filter((rule)=> rule.green.rule.temperature === TemperatureEnum.HOT);
         if(hotRules.length>0){
           rules = hotRules;
         }

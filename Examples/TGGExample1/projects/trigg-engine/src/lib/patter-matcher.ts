@@ -176,7 +176,7 @@ export class PatterMatcher {
       let valid = true;
       for(const prop in (<Object>posRuleApp.match)){
         if(prop !== '__i__')
-          valid = valid && !this.dcl.declaredSrc[(<Object>posRuleApp.match)[prop]]
+          valid = valid && this.dcl.declaredSrc[(<Object>posRuleApp.match)[prop]]
       }
       return valid;
     });
@@ -184,7 +184,7 @@ export class PatterMatcher {
       let valid = true;
       for(const prop in (<Object>posRuleApp.match)){
         if(prop !== '__i__')
-          valid = valid && !this.dcl.declaredSrc[(<Object>posRuleApp.match)[prop]]
+          valid = valid && this.dcl.declaredSrc[(<Object>posRuleApp.match)[prop]]
       }
       return valid;
     });
