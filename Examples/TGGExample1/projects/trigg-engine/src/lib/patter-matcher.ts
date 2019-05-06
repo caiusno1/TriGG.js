@@ -3,8 +3,8 @@ import { Session, noolsengine, Flow } from '../../customTypings/nools';
 declare var nools: noolsengine;
 
 export class DeclerationRepo {
-  public declaredSrc = {};
-  public declaredTrg = {};
+  public declaredSrc = new Map();
+  public declaredTrg = new Map();
   public checkDeclaredSrc(element: any): boolean {
     return this.declaredSrc[element];
   }
@@ -52,7 +52,10 @@ export class PatterMatcher {
             if (srcrule.rule.name === trgrule.rule.name) {
               const srcmatch = srcrule.match;
               const trgmatch = trgrule.match;
-              intersection.push({'rule': srcrule.rule, 'srcmatch': srcmatch, 'trgmatch': trgmatch});
+              intersection.push({'rule': srcrule.rule,
+              'srcmatch': srcmatch,
+              'trgmatch': trgmatch,
+              'allTrgMatches': patternmatcher.applicableRulesTrg.filter((rule)=>rule.rule.name === srcrule.rule.name)});
               console.log('black match');
             }
           }
@@ -128,20 +131,24 @@ export class PatterMatcher {
     });
     this.srcgreenflow = nools.flow('src_green', function(s) {
       for ( const rule of ruleseset) {
-        s.rule(rule.name + '_src_green', noolsConfigSrc , rule.srcgreenpattern, function(facts) {
-          // rewrite match
-          matcher.applicableFwdSyncRules.push({'rule': rule, 'match': facts});
-          console.log('srcgreenmatch ' + rule.name);
-        });
+        if (rule.srcgreenpattern) {
+          s.rule(rule.name + '_src_green', noolsConfigSrc , rule.srcgreenpattern, function(facts) {
+            // rewrite match
+            matcher.applicableFwdSyncRules.push({'rule': rule, 'match': facts});
+            console.log('srcgreenmatch ' + rule.name);
+          });
+        }
       }
     });
     this.trggreenflow = nools.flow('trg_green', function(s) {
       for ( const rule of ruleseset) {
-        s.rule(rule.name + '_trg_green', noolsConfigTrg, rule.trggreenpattern, function(facts) {
-          // rewrite match
-          matcher.applicableRulesTrg.push({'rule': rule, 'match': facts});
-          console.log('trggreenmatch ' + rule.name);
-        });
+        if (rule.trggreenpattern) {
+          s.rule(rule.name + '_trg_green', noolsConfigTrg, rule.trggreenpattern, function(facts) {
+            // rewrite match
+            matcher.applicableRulesTrg.push({'rule': rule, 'match': facts});
+            console.log('trggreenmatch ' + rule.name);
+          });
+        }
       }
     });
     this.srcsession = this.srcflow.getSession();
@@ -176,7 +183,7 @@ export class PatterMatcher {
       let valid = true;
       for(const prop in (<Object>posRuleApp.match)){
         if(prop !== '__i__')
-          valid = valid && this.dcl.declaredSrc[(<Object>posRuleApp.match)[prop]]
+          valid = valid && this.dcl.declaredSrc.get((<Object>posRuleApp.match)[prop])
       }
       return valid;
     });
@@ -184,7 +191,7 @@ export class PatterMatcher {
       let valid = true;
       for(const prop in (<Object>posRuleApp.match)){
         if(prop !== '__i__')
-          valid = valid && this.dcl.declaredSrc[(<Object>posRuleApp.match)[prop]]
+          valid = valid && this.dcl.declaredSrc.get((<Object>posRuleApp.match)[prop])
       }
       return valid;
     });

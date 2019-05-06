@@ -10,7 +10,8 @@ export class TGGRule{
   srcgreenpattern:([Class,string,string,string|FromLink]|[Class,string,null,string,string|FromLink]|[Class,string,string])[];
   srcbrighingEdges?:BridgingEdge[]|undefined;
   trgblackpattern?:([Class,string,string,string|FromLink]|[Class,string,null,string,string|FromLink]|[Class,string,string])[];
-  trggreenpattern:([Class,string,string,string|FromLink]|[Class,string,null,string,string|FromLink]|[Class,string,string])[];
+  trggreenpattern?:([Class,string,string,string|FromLink]|[Class,string,null,string,string|FromLink]|[Class,string,string])[];
+  trgyellowpattern?:([Class,string,string,string|FromLink]|[Class,string,null,string,string|FromLink]|[Class,string,string])[];
   trgbrighingEdges?:BridgingEdge[]|undefined;
   corr?:CorrespondensLink[];
 }
