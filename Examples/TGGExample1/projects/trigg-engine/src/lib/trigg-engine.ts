@@ -269,66 +269,80 @@ export class TriggEngine {
           objconstraint.value    = constrVal
           objconstraint.temperatur    = temp
 
-          if(this.constraintsKey in currentity){
-            for(const constraint of currentity[this.constraintsKey]){
-              const typedConstraint:ObjectContraint = constraint;
-              if(attrName === typedConstraint.name){
-                // special case style
-                if(attrName === '__style'){
-                  const conflictingKeys = [];
-                  let ParsedConstrVal=JSON.parse(constrVal);
-                  let ParsedTypedConstraintValue = JSON.parse(typedConstraint.value);
-                  for(const newStyleKeys in ParsedConstrVal){
-                    for(const oldStyleKeys in ParsedTypedConstraintValue){
-                      if(newStyleKeys === oldStyleKeys){
-                        conflictingKeys.push(newStyleKeys);
-                      }
+          if(!(this.constraintsKey in currentity)){
+            currentity[this.constraintsKey] = [];
+          }
+          let conflicting = false;
+          for(const constraint of currentity[this.constraintsKey]){
+            const typedConstraint:ObjectContraint = constraint;
+            if(attrName === typedConstraint.name){
+              conflicting=true;
+              // special case style
+              if(attrName === '__style'){
+                const conflictingKeys = [];
+                let ParsedConstrVal=JSON.parse(constrVal);
+                let ParsedTypedConstraintValue = JSON.parse(typedConstraint.value);
+                for(const newStyleKeys in ParsedConstrVal){
+                  for(const oldStyleKeys in ParsedTypedConstraintValue){
+                    if(newStyleKeys === oldStyleKeys){
+                      conflictingKeys.push(newStyleKeys);
                     }
                   }
-                  for(const styleKey in ParsedTypedConstraintValue){
-                    if(conflictingKeys.includes(styleKey)){
-                      if(temp === TemperatureEnum.HOT){
-                        if(typedConstraint.temperatur === TemperatureEnum.HOT){
-                          console.log("Not solveable Style conflict");
-                        }
-                        else{
-                          console.log("nothing to do");
-                          constraint.blockedBy.add(objconstraint);
-                        }
+                }
+                for(const styleKey in ParsedTypedConstraintValue){
+                  if(conflictingKeys.includes(styleKey)){
+                    if(temp == TemperatureEnum.HOT){
+                      if(typedConstraint.temperatur == TemperatureEnum.HOT){
+                        console.log("Not solveable Style conflict");
                       }
                       else{
-                        if(typedConstraint.temperatur === TemperatureEnum.HOT){
-                          ParsedConstrVal[styleKey]=ParsedTypedConstraintValue[styleKey];
-                          objconstraint.blockedBy.add(constraint);
-                          console.log("Apply old over new");
-                        }
-                        else{
-                          constraint.blockedBy.add(objconstraint);
-                          console.log("nothing to do");
-                        }
+                        constraint.blockedBy.add(objconstraint);
                       }
                     }
                     else{
-                      ParsedConstrVal[styleKey]=ParsedTypedConstraintValue[styleKey];
+                      if(typedConstraint.temperatur == TemperatureEnum.HOT){
+                        ParsedConstrVal[styleKey]=ParsedTypedConstraintValue[styleKey];
+                        objconstraint.blockedBy.add(constraint);
+                        console.log("Apply old over new - style");
+                      }
+                      else{
+                        constraint.blockedBy.add(objconstraint);
+                        console.log("nothing to do - style");
+                      }
                     }
                   }
-                  constrVal = JSON.stringify(ParsedConstrVal);
-                  typedConstraint.value=JSON.stringify(ParsedTypedConstraintValue);
-                } else {
-                  // Default conflict case
+                  else{
+                    ParsedConstrVal[styleKey]=ParsedTypedConstraintValue[styleKey];
+                  }
+                }
+                constrVal = JSON.stringify(ParsedConstrVal);
+                typedConstraint.value=JSON.stringify(ParsedTypedConstraintValue);
+                this.applyValue(currentity,attrName,constrVal,operator);
+              } else {
+                if(temp == TemperatureEnum.HOT){
+                  if(typedConstraint.temperatur == TemperatureEnum.HOT){
+                    console.log("unsolveable conflict");
+                  }
+                  else{
+                    this.applyValue(currentity,attrName,constrVal,operator);
+                  }
+                }
+                else{
+                  if(typedConstraint.temperatur == TemperatureEnum.HOT){
+                    console.log("old was hot use old");
+                  }
+                  else{
+                    console.log("both cold - use newer");
+                    this.applyValue(currentity,attrName,constrVal,operator);
+                  }
                 }
               }
             }
           }
-          this.applyValue(currentity,attrName,constrVal,operator);
-
-          if(this.constraintsKey in currentity){
-            currentity[this.constraintsKey].push(objconstraint);
+          if(!conflicting){
+            this.applyValue(currentity,attrName,constrVal,operator);
           }
-          else{
-            currentity[this.constraintsKey] = [];
-            currentity[this.constraintsKey].push(objconstraint);
-          }
+          currentity[this.constraintsKey].push(objconstraint);
         }
       }
     }
