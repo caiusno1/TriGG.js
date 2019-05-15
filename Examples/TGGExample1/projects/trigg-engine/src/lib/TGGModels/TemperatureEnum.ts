@@ -1,3 +1,3 @@
 export enum TemperatureEnum{
-  HOT,COLD
+  HOT,COLD,INIT
 }

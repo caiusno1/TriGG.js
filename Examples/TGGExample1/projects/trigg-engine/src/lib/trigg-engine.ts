@@ -1,7 +1,9 @@
+import { TGGRule } from './TGGModels/TGGRule';
+import { RuntimeCorrespondensLink } from './TGGModels/RuntimeCorrespondensLink';
+import { element } from 'protractor';
 import { ObjectContraint } from './TGGModels/ObjectConstraint';
-import { patch, diff } from 'jsondiffpatch';
 import { ApplicableRuleApp } from './TGGModels/ApplicableRuleApp';
-import { TGGRule, FromLink } from './TGGModels/TGGRule';
+import { FromLink } from './TGGModels/TGGRule';
 import { TriggModelService } from './services/trigg-model.service';
 import { RuleApplication } from './TGGModels/RuleApplication';
 import { PatterMatcher } from './patter-matcher';
@@ -23,11 +25,13 @@ export class TriggEngine {
     public modelServ: TriggModelService;
     private corrModel;
     private ruleApplications: RuleApplication[] = [];
-    private ruleApplicationDict = {};
+    private ruleApplicationDict = new Map<any,RuleApplication[]>([]);
     private targetingReferencesKey: symbol;
     private constraintsKey: symbol;
-    init(ruleseset, modelServ: TriggModelService) {
-        this.patternMatcher = new PatterMatcher(ruleseset);
+    public ruleSet:TGGRule[];
+    init(pruleset: TGGRule[], modelServ: TriggModelService) {
+        this.patternMatcher = new PatterMatcher(pruleset);
+        this.ruleSet=pruleset;
         this.src = [modelServ.getSrcModel()];
         if (modelServ.getTrgModel()) {
           this.trg = [modelServ.getTrgModel()];
@@ -55,8 +59,14 @@ export class TriggEngine {
       if (srcdiff) {
         for (const pdiff of srcdiff) {
           if (pdiff.type === 'del' || pdiff.type === 'mod') {
-            const delRuleApplication = this.ruleApplicationDict[pdiff.element];
-            this.rolebackRuleApplicationsRecursive(delRuleApplication);
+            const delRuleApplications = this.ruleApplicationDict.get(pdiff.element);
+            // If there are still aplied ruleApplications (but yellows are maybe deleted already)
+            if(delRuleApplications){
+              for(const delRuleApplication of delRuleApplications){
+                this.rolebackRuleApplicationsRecursive(delRuleApplication);
+              }
+              this.ruleApplicationDict.delete(pdiff.element);
+            }
           }
           if (pdiff.type === 'add' || pdiff.type === 'mod') {
             this.patternMatcher.addSrcElementsRecursive(pdiff.element);
@@ -71,6 +81,21 @@ export class TriggEngine {
     }
     private rolebackRuleApplicationsRecursive(rApp: RuleApplication) {
       if (rApp) {
+        // Remove constraints first to be sure that all elements exists (for performance reasons one can optimize this later)
+        for(const constraint of rApp.constraints){
+
+          const constrainsToApply = constraint.entity[this.constraintsKey].filter((constr) => constraint!= constr);
+          constraint.entity[this.constraintsKey]=[];
+          for(const entityConstraint of constrainsToApply){
+            const typedEntityConstraint:ObjectContraint=entityConstraint;
+            // remove dependency if there is one
+            if(typedEntityConstraint.blockedBy.delete(constraint)){
+              if(typedEntityConstraint.blockedBy.size === 0){
+                this.applyContraints('k.'+typedEntityConstraint.name+typedEntityConstraint.operator+typedEntityConstraint.value,{"k" : typedEntityConstraint.entity},typedEntityConstraint.ruleApplication);
+              }
+            }
+          }
+        }
         for (const modelTrgElement of rApp.trgElements) {
           if(modelTrgElement){
             this.patternMatcher.removeTrgElement(modelTrgElement);
@@ -110,7 +135,10 @@ export class TriggEngine {
                 let alledgesMatching = true;
                 if (match.rule.srcbrighingEdges) {
                   for (const edge of match.rule.srcbrighingEdges) {
-                    alledgesMatching = alledgesMatching && match.srcmatch[edge.node1][edge.edgeName] === green.match[edge.node2];
+                    alledgesMatching = alledgesMatching &&
+                      (Array.isArray(match.srcmatch[edge.node1][edge.edgeName]))
+                        ?match.srcmatch[edge.node1][edge.edgeName].includes(green.match[edge.node2])
+                        :match.srcmatch[edge.node1][edge.edgeName] === green.match[edge.node2];
                   }
                 }
                 if (alledgesMatching) {
@@ -132,6 +160,7 @@ export class TriggEngine {
         const green = rule.green;
         const items = {};
         const rApp = new RuleApplication;
+        rApp.ruleTemperature = rule.green.rule.temperature;
         const dependingList = [];
         for (const srcBlackMatchElement in match.srcmatch) {
           if (srcBlackMatchElement !== '__i__') {
@@ -149,14 +178,28 @@ export class TriggEngine {
           if (element !== '__i__') {
             const srceelement = green.match[element];
             rApp.srcElements.push(srceelement);
-            trigg.ruleApplicationDict[srceelement] = rApp;
+            if(trigg.ruleApplicationDict.has(srceelement)){
+              trigg.ruleApplicationDict.get(srceelement).push(rApp);
+            }
+            else{
+              trigg.ruleApplicationDict.set(srceelement,[rApp]);
+            }
             trigg.patternMatcher.dcl.declaredSrc.set(srceelement,rApp);
             trigg.patternMatcher.refreshSrcElement(srceelement);
           }
         }
         if(match.rule.trggreenpattern) {
           for (const tocreateElement of match.rule.trggreenpattern) {
-            const newElement = this.createObjectThatFitConstraints(tocreateElement[0], tocreateElement[2], items, tocreateElement[1],match.rule.temperature );
+            const newElement = this.createObjectThatFitConstraints(tocreateElement[0], tocreateElement[2], items, tocreateElement[1],match.rule.temperature, rApp );
+            for(const corrLink of match.rule.corr){
+              if(corrLink.reftrg === tocreateElement[1]){
+                const rTCorr=new RuntimeCorrespondensLink();
+                rTCorr.reftrg=newElement;
+                if(corrLink.refsrc in green.match){
+                  rTCorr.refsrc=green.match[corrLink.refsrc];
+                }
+              }
+            }
             rApp.trgElements.push(items[tocreateElement[1]]);
 
             let connected = false;
@@ -204,7 +247,7 @@ export class TriggEngine {
               for(const blackElement in blackTrgMatch.match){
                 if(yellowElement[1] === blackElement && blackElement !== '__i__'){
                   // Conflicts have to be addressed
-                  this.applyContraints(yellowElement[2],match.trgmatch, match.rule.temperature);
+                  this.applyContraints(yellowElement[2],match.trgmatch, rApp);
                 }
               }
             }
@@ -236,13 +279,13 @@ export class TriggEngine {
         return false;
       }
     }
-    private createObjectThatFitConstraints(type: any, constraints: string, LokalConstraintObjectSpace: any, name: string, temp: TemperatureEnum) {
+    private createObjectThatFitConstraints(type: any, constraints: string, LokalConstraintObjectSpace: any, name: string, temp: TemperatureEnum, rApp:RuleApplication) {
       const newElement = new type();
       LokalConstraintObjectSpace[name] = newElement;
-      this.applyContraints(constraints, LokalConstraintObjectSpace,temp);
+      this.applyContraints(constraints, LokalConstraintObjectSpace, rApp);
       return newElement;
     }
-    private applyContraints(constraints: string, LokalConstraintObjectSpace: any, temp: TemperatureEnum){
+    private applyContraints(constraints: string, LokalConstraintObjectSpace: any, rApp: RuleApplication){
       for (const constraint of constraints.split('&&').map((str: string) => str.trim())) {
         if ( constraint.includes('dcl.declared') || constraint === '' ) {
           continue;
@@ -267,13 +310,16 @@ export class TriggEngine {
           objconstraint.operator = operator;
           objconstraint.name     = attrName;
           objconstraint.value    = constrVal
-          objconstraint.temperatur    = temp
+          objconstraint.temperatur    = rApp.ruleTemperature;
+          objconstraint.ruleApplication=rApp;
+          rApp.constraints.push(objconstraint)
 
           if(!(this.constraintsKey in currentity)){
             currentity[this.constraintsKey] = [];
           }
           let conflicting = false;
-          for(const constraint of currentity[this.constraintsKey]){
+          const sortedConstraints = currentity[this.constraintsKey].sort((item:ObjectContraint)=>item.temperatur );
+          for(const constraint of sortedConstraints){
             const typedConstraint:ObjectContraint = constraint;
             if(attrName === typedConstraint.name){
               conflicting=true;
@@ -291,16 +337,43 @@ export class TriggEngine {
                 }
                 for(const styleKey in ParsedTypedConstraintValue){
                   if(conflictingKeys.includes(styleKey)){
-                    if(temp == TemperatureEnum.HOT){
+                    if(rApp.ruleTemperature == TemperatureEnum.HOT){
                       if(typedConstraint.temperatur == TemperatureEnum.HOT){
-                        console.log("Not solveable Style conflict");
+                        ParsedConstrVal[styleKey]=ParsedTypedConstraintValue[styleKey];
+                        console.log("unsolveable conflict - use first for now");
+                        console.log(typedConstraint.ruleApplication.ruleName);
+                        objconstraint.blockedBy.add(typedConstraint);
+                        break;
+                      }
+                      else if(typedConstraint.temperatur == TemperatureEnum.COLD){
+                        constraint.blockedBy.add(objconstraint);
                       }
                       else{
                         constraint.blockedBy.add(objconstraint);
                       }
                     }
+                    else if(rApp.ruleTemperature == TemperatureEnum.COLD){
+                      if(typedConstraint.temperatur == TemperatureEnum.HOT){
+                        ParsedConstrVal[styleKey]=ParsedTypedConstraintValue[styleKey];
+                        objconstraint.blockedBy.add(constraint);
+                        console.log("Apply old over new - style");
+                      }
+                      else if(typedConstraint.temperatur == TemperatureEnum.COLD){
+                        constraint.blockedBy.add(objconstraint);
+                        console.log("nothing to do - style");
+                      }
+                      else{
+                        constraint.blockedBy.add(objconstraint);
+                        console.log("nothing to do - style");
+                      }
+                    }
                     else{
                       if(typedConstraint.temperatur == TemperatureEnum.HOT){
+                        ParsedConstrVal[styleKey]=ParsedTypedConstraintValue[styleKey];
+                        objconstraint.blockedBy.add(constraint);
+                        console.log("Apply old over new - style");
+                      }
+                      else if(typedConstraint.temperatur == TemperatureEnum.COLD){
                         ParsedConstrVal[styleKey]=ParsedTypedConstraintValue[styleKey];
                         objconstraint.blockedBy.add(constraint);
                         console.log("Apply old over new - style");
@@ -319,21 +392,47 @@ export class TriggEngine {
                 typedConstraint.value=JSON.stringify(ParsedTypedConstraintValue);
                 this.applyValue(currentity,attrName,constrVal,operator);
               } else {
-                if(temp == TemperatureEnum.HOT){
+                if(rApp.ruleTemperature == TemperatureEnum.HOT){
                   if(typedConstraint.temperatur == TemperatureEnum.HOT){
-                    console.log("unsolveable conflict");
+                    console.log("unsolveable conflict - use first for now");
+                    console.log(typedConstraint.ruleApplication.ruleName);
+                    objconstraint.blockedBy.add(typedConstraint);
+                    break;
                   }
-                  else{
+                  else if(typedConstraint.temperatur == TemperatureEnum.COLD){
+                    typedConstraint.blockedBy.add(objconstraint);
+                    this.applyValue(currentity,attrName,constrVal,operator);
+                  } else{
+                    typedConstraint.blockedBy.add(objconstraint);
                     this.applyValue(currentity,attrName,constrVal,operator);
                   }
                 }
-                else{
+                else if(rApp.ruleTemperature == TemperatureEnum.COLD){
                   if(typedConstraint.temperatur == TemperatureEnum.HOT){
                     console.log("old was hot use old");
+                    objconstraint.blockedBy.add(typedConstraint);
                   }
-                  else{
+                  else if(typedConstraint.temperatur == TemperatureEnum.COLD){
                     console.log("both cold - use newer");
                     this.applyValue(currentity,attrName,constrVal,operator);
+                    typedConstraint.blockedBy.add(objconstraint);
+                  } else {
+                    console.log("old is init use new");
+                    this.applyValue(currentity,attrName,constrVal,operator);
+                    typedConstraint.blockedBy.add(objconstraint);
+                  }
+                } else{
+                  if(typedConstraint.temperatur == TemperatureEnum.HOT){
+                    console.log("old was hot use old");
+                    objconstraint.blockedBy.add(typedConstraint);
+                  }
+                  else if(typedConstraint.temperatur == TemperatureEnum.COLD){
+                    console.log("new is init - use old");
+                    objconstraint.blockedBy.add(typedConstraint);
+                  } else {
+                    console.log("both are init use new");
+                    this.applyValue(currentity,attrName,constrVal,operator);
+                    typedConstraint.blockedBy.add(objconstraint);
                   }
                 }
               }

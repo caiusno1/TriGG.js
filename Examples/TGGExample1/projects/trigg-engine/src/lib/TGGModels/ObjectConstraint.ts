@@ -1,3 +1,4 @@
+import { RuleApplication } from './RuleApplication';
 export class ObjectContraint{
   temperatur;
   entity;
@@ -6,4 +7,5 @@ export class ObjectContraint{
   value;
   // "Partitially" Blocked
   blockedBy:Set<any>=new Set([]);
+  ruleApplication:RuleApplication;
 }
