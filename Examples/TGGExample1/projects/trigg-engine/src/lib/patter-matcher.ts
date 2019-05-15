@@ -1,3 +1,4 @@
+import { TGGRule } from 'TriGGEngine/Examples/TGGExample1/projects/trigg-engine/src/lib/TGGModels/TGGRule';
 import { NoolsRuleConfig } from '../../customTypings/nools';
 import { Session, noolsengine, Flow } from '../../customTypings/nools';
 declare var nools: noolsengine;
@@ -96,7 +97,118 @@ export class PatterMatcher {
     this.trgsession.retract(modelTrgElement);
     this.trggreensession.retract(modelTrgElement);
   }
-  private addrules(ruleseset) {
+  // don't work for not reason?
+  public updateRuleSet(ruleseset:TGGRule[]){
+    if(nools.hasFlow('src')){
+      nools.deleteFlow('src');
+      this.srcflow = undefined;
+    }
+    if(nools.hasFlow('src_green')){
+      nools.deleteFlow('src_green');
+      this.srcgreenflow = undefined;
+    }
+    if(nools.hasFlow('trg')){
+      nools.deleteFlow('trg');
+      this.trgflow = undefined;
+    }
+    if(nools.hasFlow('trg_green')){
+      nools.deleteFlow('trg_green');
+      this.trgflow = undefined;
+    }
+    const srcFacts = this.srcsession.getFacts();
+    const srcGreenFacts = this.srcgreensession.getFacts();
+    const trgFacts = this.trgsession.getFacts();
+    const trgGreenFacts = this.trggreensession.getFacts();
+    this.addrules(ruleseset);
+    for(const srcFact of srcFacts){
+      this.srcsession.assert(srcFact);
+    }
+    for(const srcGreenFact of srcGreenFacts){
+      this.srcgreensession.assert(srcGreenFact);
+    }
+    for(const trgFact of trgFacts){
+      this.trgsession.assert(trgFact);
+    }
+    for(const trgGreenFact of trgGreenFacts){
+      this.trggreensession.assert(trgGreenFact);
+    }
+  }
+  public addRule(rule:TGGRule){
+    const srcFacts = this.srcsession.getFacts();
+    const srcGreenFacts = this.srcgreensession.getFacts();
+    const trgFacts = this.trgsession.getFacts();
+    const trgGreenFacts = this.trggreensession.getFacts();
+    const noolsConfigSrc: NoolsRuleConfig =
+    {scope: {dcl: this.dcl}, agendaGroup: undefined, autoFocus: undefined, salience: undefined};
+    const noolsConfigTrg: NoolsRuleConfig =
+    {scope: {dcl: this.dcl}, agendaGroup: undefined, autoFocus: undefined, salience: undefined};
+    const matcher = this;
+    this.srcflow = nools.getFlow('src');
+    if (rule.srcblackpattern) {
+      if((<any>rule.srcblackpattern).scope){
+        delete (<any>rule.srcblackpattern).scope;
+      }
+      this.srcflow.rule(rule.name + '_src', noolsConfigSrc , rule.srcblackpattern, function(facts) {
+        // rewrite match
+        matcher.applicableRulesSrc.push({'rule': rule, 'match': facts});
+        console.log('srcblackmatch ' + rule.name );
+      });
+    } else {
+      matcher.ruleswithoutsrcblack.push(rule);
+    }
+    this.trgflow = nools.getFlow('trg')
+    if (rule.trgblackpattern) {
+      if((<any>rule.trgblackpattern).scope){
+        delete (<any>rule.trgblackpattern).scope;
+      }
+      this.trgflow.rule(rule.name + '_trg', noolsConfigTrg, rule.trgblackpattern, function(facts) {
+        // rewrite match
+        matcher.applicableRulesTrg.push({'rule': rule, 'match': facts});
+        console.log('trgblackmatch ' + rule.name);
+      });
+    } else {
+      matcher.ruleswithouttrgblack.push(rule);
+    }
+    this.srcgreenflow = nools.getFlow('src_green');
+    if (rule.srcgreenpattern) {
+      if((<any>rule.srcgreenpattern).scope){
+        delete (<any>rule.srcgreenpattern).scope;
+      }
+      this.srcgreenflow.rule(rule.name + '_src_green', noolsConfigSrc , rule.srcgreenpattern, function(facts) {
+        matcher.applicableFwdSyncRules.push({'rule': rule, 'match': facts});
+        console.log('srcgreenmatch ' + rule.name);
+      });
+    }
+    this.trggreenflow = nools.getFlow('trg_green');
+    if (rule.trggreenpattern) {
+      if((<any>rule.trggreenpattern).scope){
+        delete (<any>rule.trggreenpattern).scope;
+      }
+      this.trggreenflow.rule(rule.name + '_trg_green', noolsConfigTrg, rule.trggreenpattern, function(facts) {
+        matcher.applicableRulesTrg.push({'rule': rule, 'match': facts});
+        console.log('trggreenmatch ' + rule.name);
+      });
+    }
+    this.srcsession = this.srcflow.getSession();
+    this.trgsession = this.trgflow.getSession();
+    // this.srcsession.assert(this.dcl);
+    // this.trgsession.assert(this.dcl);
+    this.srcgreensession = this.srcgreenflow.getSession();
+    this.trggreensession = this.trggreenflow.getSession();
+    for(const srcFact of srcFacts){
+      this.srcsession.assert(srcFact);
+    }
+    for(const srcGreenFact of srcGreenFacts){
+      this.srcgreensession.assert(srcGreenFact);
+    }
+    for(const trgFact of trgFacts){
+      this.trgsession.assert(trgFact);
+    }
+    for(const trgGreenFact of trgGreenFacts){
+      this.trggreensession.assert(trgGreenFact);
+    }
+  }
+  private addrules(ruleseset:TGGRule[]) {
     // extract src patterns
     const noolsConfigSrc: NoolsRuleConfig =
     {scope: {dcl: this.dcl}, agendaGroup: undefined, autoFocus: undefined, salience: undefined};
@@ -106,6 +218,9 @@ export class PatterMatcher {
     this.srcflow = nools.flow('src', function(s) {
       for ( const rule of ruleseset) {
         if (rule.srcblackpattern) {
+          if((<any>rule.srcblackpattern).scope){
+            delete (<any>rule.srcblackpattern).scope;
+          }
           s.rule(rule.name + '_src', noolsConfigSrc , rule.srcblackpattern, function(facts) {
             // rewrite match
             matcher.applicableRulesSrc.push({'rule': rule, 'match': facts});
@@ -119,6 +234,9 @@ export class PatterMatcher {
     this.trgflow = nools.flow('trg', function(t) {
       for ( const rule of ruleseset) {
         if (rule.trgblackpattern) {
+          if((<any>rule.trgblackpattern).scope){
+            delete (<any>rule.trgblackpattern).scope;
+          }
           t.rule(rule.name + '_trg', noolsConfigTrg, rule.trgblackpattern, function(facts) {
             // rewrite match
             matcher.applicableRulesTrg.push({'rule': rule, 'match': facts});
@@ -132,6 +250,9 @@ export class PatterMatcher {
     this.srcgreenflow = nools.flow('src_green', function(s) {
       for ( const rule of ruleseset) {
         if (rule.srcgreenpattern) {
+          if((<any>rule.srcgreenpattern).scope){
+            delete (<any>rule.srcgreenpattern).scope;
+          }
           s.rule(rule.name + '_src_green', noolsConfigSrc , rule.srcgreenpattern, function(facts) {
             // rewrite match
             matcher.applicableFwdSyncRules.push({'rule': rule, 'match': facts});
@@ -143,6 +264,9 @@ export class PatterMatcher {
     this.trggreenflow = nools.flow('trg_green', function(s) {
       for ( const rule of ruleseset) {
         if (rule.trggreenpattern) {
+          if((<any>rule.trggreenpattern).scope){
+            delete (<any>rule.trggreenpattern).scope;
+          }
           s.rule(rule.name + '_trg_green', noolsConfigTrg, rule.trggreenpattern, function(facts) {
             // rewrite match
             matcher.applicableRulesTrg.push({'rule': rule, 'match': facts});

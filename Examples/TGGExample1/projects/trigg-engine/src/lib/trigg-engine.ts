@@ -48,11 +48,13 @@ export class TriggEngine {
         this.targetingReferencesKey = Symbol('parent');
         this.constraintsKey = Symbol('constraints');
     }
-    addRule() {
-        throw new Error('Method not implemented.');
+    addRule(rule:TGGRule) {
+      this.ruleSet.push(rule);
+      this.patternMatcher.addRule(rule);
     }
-    removeRule() {
-        throw new Error('Method not implemented.');
+    removeRule(name: string) {
+      this.ruleSet = this.ruleSet.filter((rule) => rule.name !== name);
+      this.patternMatcher.updateRuleSet(this.ruleSet);
     }
     forward_sync(srcdiff): Promise<void> {
       // console.log(srcdiff);
