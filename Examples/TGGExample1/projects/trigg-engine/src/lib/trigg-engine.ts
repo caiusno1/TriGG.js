@@ -1,3 +1,4 @@
+import { RuntimeUIModelBase } from './../../../../../../../src/app/runtime-uimodel-base';
 import { TGGRule } from './TGGModels/TGGRule';
 import { RuntimeCorrespondensLink } from './TGGModels/RuntimeCorrespondensLink';
 import { element } from 'protractor';
@@ -91,7 +92,7 @@ export class TriggEngine {
           for(const entityConstraint of constrainsToApply){
             const typedEntityConstraint:ObjectContraint=entityConstraint;
             // remove dependency if there is one
-            if(typedEntityConstraint.blockedBy.delete(constraint)){
+            if(typedEntityConstraint.blockedBy.delete(constraint)|| typedEntityConstraint.blockedBy.size === 0){
               if(typedEntityConstraint.blockedBy.size === 0){
                 this.applyContraints('k.'+typedEntityConstraint.name+typedEntityConstraint.operator+typedEntityConstraint.value,{"k" : typedEntityConstraint.entity},typedEntityConstraint.ruleApplication);
               }
@@ -449,7 +450,24 @@ export class TriggEngine {
     }
     private applyValue(obj,key,value,operator){
       if (['==', '===', '<=', '>='].includes(operator)) {
-        obj[key] = value;
+        if(key !== '__style'){
+          obj[key] = value;
+        }
+        else{
+          const parseValue= JSON.parse(value);
+          for(const subvalue in parseValue){
+            let rtObjectStyle;
+            if(!obj.hasOwnProperty('_style')){
+              rtObjectStyle={};
+            }
+            else{
+              rtObjectStyle=JSON.parse(obj['_style']);
+            }
+
+            rtObjectStyle[subvalue]=parseValue[subvalue];
+            (<RuntimeUIModelBase>obj).__style=JSON.stringify(rtObjectStyle);
+          }
+        }
       } else if (['>', '!=', '!=='].includes(operator)) {
         obj[key] = value + 1 ;
       } else {
