@@ -84,18 +84,24 @@ export class TriggEngine {
     }
     private rolebackRuleApplicationsRecursive(rApp: RuleApplication) {
       if (rApp) {
+        console.log("roleback: "+rApp.ruleName);
         // Remove constraints first to be sure that all elements exists (for performance reasons one can optimize this later)
         for(const constraint of rApp.constraints){
-
-          const constrainsToApply = constraint.entity[this.constraintsKey].filter((constr) => constraint!= constr);
+          const constrainsToApply = constraint.entity[this.constraintsKey].filter((constr) => constr!=constraint);
+          const sortedConstraintsToApply = constrainsToApply.sort((item:ObjectContraint)=>item.temperatur );
+          constraint.entity[this.constraintsKey]=sortedConstraintsToApply;
+        }
+        for(const constraint of rApp.constraints){
+          const constrainsToApply = constraint.entity[this.constraintsKey];
           constraint.entity[this.constraintsKey]=[];
           for(const entityConstraint of constrainsToApply){
             const typedEntityConstraint:ObjectContraint=entityConstraint;
             // remove dependency if there is one
-            if(typedEntityConstraint.blockedBy.delete(constraint)|| typedEntityConstraint.blockedBy.size === 0){
-              if(typedEntityConstraint.blockedBy.size === 0){
-                this.applyContraints('k.'+typedEntityConstraint.name+typedEntityConstraint.operator+typedEntityConstraint.value,{"k" : typedEntityConstraint.entity},typedEntityConstraint.ruleApplication);
-              }
+            typedEntityConstraint.blockedBy.delete(constraint);
+            if(typedEntityConstraint.blockedBy.size>0){
+              constraint.entity[this.constraintsKey].push(typedEntityConstraint);
+            } else{
+              this.applyContraints('k.'+typedEntityConstraint.name+typedEntityConstraint.operator+typedEntityConstraint.value,{"k" : typedEntityConstraint.entity},typedEntityConstraint.ruleApplication);
             }
           }
         }
