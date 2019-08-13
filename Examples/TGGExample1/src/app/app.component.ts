@@ -1,3 +1,4 @@
+import { AdaptationVizService } from './../../../../../src/app/AdaptationViz/adaptation-viz.service';
 import { Component } from '@angular/core';
 import { Context, Vision, Message, UserContext } from './models/Context';
 import { Page, Website } from './models/Ifml';
@@ -10,7 +11,7 @@ import { TriggModelService, TriggEngine } from 'projects/trigg-engine/src/public
 export class AppComponent {
   title = 'TGGExample1';
   srcmodel_ctx: Context;
-  constructor(private modServ: TriggModelService) {
+  constructor(private modServ: TriggModelService, private adaptViz: AdaptationVizService) {
     /*let engine = new TriggEngine;
     engine.loadRules();
     const obj = {root: {'test': '5'}, damm: {prop1: 'testy'}};
@@ -76,7 +77,7 @@ export class AppComponent {
     const engine: TriggEngine = new TriggEngine;
     modServ.pushSrcModel(this.srcmodel_ctx);
     modServ.pushTrgModel(trgmodel_ifml);
-    engine.init(ruleset, modServ);
+    engine.init(ruleset, modServ, adaptViz);
     let i = 0;
     engine.modelServ.registerForAfterSync(() => {
       console.log('after snyc');

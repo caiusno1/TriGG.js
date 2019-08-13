@@ -1,3 +1,4 @@
+import { AdaptationVizService } from './../../../../../../../src/app/AdaptationViz/adaptation-viz.service';
 import { RuntimeUIModelBase } from './../../../../../../../src/app/runtime-uimodel-base';
 import { TGGRule } from './TGGModels/TGGRule';
 import { RuntimeCorrespondensLink } from './TGGModels/RuntimeCorrespondensLink';
@@ -30,7 +31,8 @@ export class TriggEngine {
     private targetingReferencesKey: symbol;
     private constraintsKey: symbol;
     public ruleSet:TGGRule[];
-    init(pruleset: TGGRule[], modelServ: TriggModelService) {
+    private adaptViz: AdaptationVizService;
+    init(pruleset: TGGRule[], modelServ: TriggModelService, adaptVizServ: AdaptationVizService) {
         this.patternMatcher = new PatterMatcher(pruleset);
         this.ruleSet=pruleset;
         this.src = [modelServ.getSrcModel()];
@@ -48,6 +50,7 @@ export class TriggEngine {
         }
         this.targetingReferencesKey = Symbol('parent');
         this.constraintsKey = Symbol('constraints');
+        this.adaptViz = adaptVizServ;
     }
     addRule(rule:TGGRule) {
       this.ruleSet.push(rule);
@@ -85,6 +88,7 @@ export class TriggEngine {
     private rolebackRuleApplicationsRecursive(rApp: RuleApplication) {
       if (rApp) {
         console.log("roleback: "+rApp.ruleName);
+        this.adaptViz.activeAdaptations = this.adaptViz.activeAdaptations.filter(app => app.ruleName!=rApp.ruleName);
         // Remove constraints first to be sure that all elements exists (for performance reasons one can optimize this later)
         for(const constraint of rApp.constraints){
           const constrainsToApply = constraint.entity[this.constraintsKey].filter((constr) => constr!=constraint);
@@ -102,6 +106,8 @@ export class TriggEngine {
               constraint.entity[this.constraintsKey].push(typedEntityConstraint);
             } else{
               this.applyContraints('k.'+typedEntityConstraint.name+typedEntityConstraint.operator+typedEntityConstraint.value,{"k" : typedEntityConstraint.entity},typedEntityConstraint.ruleApplication);
+              this.adaptViz.blockedAdaptations.value.delete(typedEntityConstraint.ruleApplication);
+              this.adaptViz.blockedAdaptations.next(this.adaptViz.blockedAdaptations.value);
             }
           }
         }
@@ -163,12 +169,13 @@ export class TriggEngine {
       });
     }
     private applyFwdSyncRule(rule: ApplicableRuleApp, trigg) {
-      console.log(rule.green.rule.name + ' applied')
+      console.log(rule.green.rule.name + ' applied');
       if (rule) {
         const match = rule.match;
         const green = rule.green;
         const items = {};
         const rApp = new RuleApplication;
+        this.adaptViz.activeAdaptations.push(rApp);
         rApp.ruleTemperature = rule.green.rule.temperature;
         const dependingList = [];
         for (const srcBlackMatchElement in match.srcmatch) {
@@ -351,28 +358,36 @@ export class TriggEngine {
                         ParsedConstrVal[styleKey]=ParsedTypedConstraintValue[styleKey];
                         console.log("unsolveable conflict - use first for now");
                         console.log(typedConstraint.ruleApplication.ruleName);
+                        this.adaptViz.blockedAdaptations.value.add(objconstraint.ruleApplication);
                         objconstraint.blockedBy.add(typedConstraint);
                         break;
                       }
                       else if(typedConstraint.temperatur == TemperatureEnum.COLD){
                         constraint.blockedBy.add(objconstraint);
+                        this.adaptViz.blockedAdaptations.value.add(constraint.ruleApplication);
                       }
                       else{
                         constraint.blockedBy.add(objconstraint);
+                        this.adaptViz.blockedAdaptations.value.add(constraint.ruleApplication);
                       }
                     }
                     else if(rApp.ruleTemperature == TemperatureEnum.COLD){
                       if(typedConstraint.temperatur == TemperatureEnum.HOT){
                         ParsedConstrVal[styleKey]=ParsedTypedConstraintValue[styleKey];
                         objconstraint.blockedBy.add(constraint);
+                        this.adaptViz.blockedAdaptations.value.add(objconstraint.ruleApplication);
                         console.log("Apply old over new - style");
                       }
                       else if(typedConstraint.temperatur == TemperatureEnum.COLD){
                         constraint.blockedBy.add(objconstraint);
+                        this.adaptViz.blockedAdaptations.value.add(constraint.ruleApplication);
+                        console.log(constraint);
                         console.log("nothing to do - style");
                       }
                       else{
                         constraint.blockedBy.add(objconstraint);
+                        this.adaptViz.blockedAdaptations.value.add(constraint.ruleApplication);
+                        console.log(constraint);
                         console.log("nothing to do - style");
                       }
                     }
@@ -380,15 +395,18 @@ export class TriggEngine {
                       if(typedConstraint.temperatur == TemperatureEnum.HOT){
                         ParsedConstrVal[styleKey]=ParsedTypedConstraintValue[styleKey];
                         objconstraint.blockedBy.add(constraint);
+                        this.adaptViz.blockedAdaptations.value.add(objconstraint.ruleApplication);
                         console.log("Apply old over new - style");
                       }
                       else if(typedConstraint.temperatur == TemperatureEnum.COLD){
                         ParsedConstrVal[styleKey]=ParsedTypedConstraintValue[styleKey];
                         objconstraint.blockedBy.add(constraint);
+                        this.adaptViz.blockedAdaptations.value.add(objconstraint.ruleApplication);
                         console.log("Apply old over new - style");
                       }
                       else{
                         constraint.blockedBy.add(objconstraint);
+                        this.adaptViz.blockedAdaptations.value.add(constraint.ruleApplication);
                         console.log("nothing to do - style");
                       }
                     }
@@ -396,6 +414,7 @@ export class TriggEngine {
                   else{
                     ParsedConstrVal[styleKey]=ParsedTypedConstraintValue[styleKey];
                   }
+                  this.adaptViz.blockedAdaptations.next(this.adaptViz.blockedAdaptations.value);
                 }
                 constrVal = JSON.stringify(ParsedConstrVal);
                 typedConstraint.value=JSON.stringify(ParsedTypedConstraintValue);
@@ -406,45 +425,55 @@ export class TriggEngine {
                     console.log("unsolveable conflict - use first for now");
                     console.log(typedConstraint.ruleApplication.ruleName);
                     objconstraint.blockedBy.add(typedConstraint);
+                    this.adaptViz.blockedAdaptations.value.add(objconstraint.ruleApplication);
                     break;
                   }
                   else if(typedConstraint.temperatur == TemperatureEnum.COLD){
                     typedConstraint.blockedBy.add(objconstraint);
                     this.applyValue(currentity,attrName,constrVal,operator);
+                    this.adaptViz.blockedAdaptations.value.add(typedConstraint.ruleApplication);
                   } else{
                     typedConstraint.blockedBy.add(objconstraint);
                     this.applyValue(currentity,attrName,constrVal,operator);
+                    this.adaptViz.blockedAdaptations.value.add(typedConstraint.ruleApplication);
                   }
                 }
                 else if(rApp.ruleTemperature == TemperatureEnum.COLD){
                   if(typedConstraint.temperatur == TemperatureEnum.HOT){
                     console.log("old was hot use old");
                     objconstraint.blockedBy.add(typedConstraint);
+                    this.adaptViz.blockedAdaptations.value.add(objconstraint.ruleApplication);
                   }
                   else if(typedConstraint.temperatur == TemperatureEnum.COLD){
                     console.log("both cold - use newer");
                     this.applyValue(currentity,attrName,constrVal,operator);
                     typedConstraint.blockedBy.add(objconstraint);
+                    this.adaptViz.blockedAdaptations.value.add(typedConstraint.ruleApplication);
                   } else {
                     console.log("old is init use new");
                     this.applyValue(currentity,attrName,constrVal,operator);
                     typedConstraint.blockedBy.add(objconstraint);
+                    this.adaptViz.blockedAdaptations.value.add(typedConstraint.ruleApplication);
                   }
                 } else{
                   if(typedConstraint.temperatur == TemperatureEnum.HOT){
                     console.log("old was hot use old");
                     objconstraint.blockedBy.add(typedConstraint);
+                    this.adaptViz.blockedAdaptations.value.add(objconstraint.ruleApplication);
                   }
                   else if(typedConstraint.temperatur == TemperatureEnum.COLD){
                     console.log("new is init - use old");
                     objconstraint.blockedBy.add(typedConstraint);
+                    this.adaptViz.blockedAdaptations.value.add(objconstraint.ruleApplication);
                   } else {
                     console.log("both are init use new");
                     this.applyValue(currentity,attrName,constrVal,operator);
                     typedConstraint.blockedBy.add(objconstraint);
+                    this.adaptViz.blockedAdaptations.value.add(typedConstraint.ruleApplication);
                   }
                 }
               }
+              this.adaptViz.blockedAdaptations.next(this.adaptViz.blockedAdaptations.value);
             }
           }
           if(!conflicting){
