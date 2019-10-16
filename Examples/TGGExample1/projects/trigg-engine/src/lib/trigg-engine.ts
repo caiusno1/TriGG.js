@@ -226,7 +226,7 @@ export class TriggEngine {
                   connected = true;
                   if (Array.isArray(match.trgmatch[edge.node1][edge.edgeName])) {
                     if(match.trgmatch[edge.node1][edge.edgeName].filter(ele => ele.name || ele.name === items[tocreateElement[1]].name ).length>0 && rule.green.rule.temperature === TemperatureEnum.COLD){
-                      // This is just a quick and dirty fix (assuming name is unique in a list)
+                      // This is just a quick fix (assuming name is unique in a list)
                       return;
                     }
                     match.trgmatch[edge.node1][edge.edgeName].push(items[tocreateElement[1]]);
